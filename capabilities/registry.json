@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "capabilities": [
+    {
+      "id": "logistics.route_plan",
+      "repo": "anyesgray38/shark-logistics",
+      "tags": ["logistics", "routing", "customer"],
+      "execution": "agent",
+      "verification": ["schema", "route_consistency", "independent_check"]
+    },
+    {
+      "id": "trading.smc_research",
+      "repo": "shark-smc-engine",
+      "tags": ["trading", "research", "smc"],
+      "execution": "agent",
+      "verification": ["data_provenance", "statistical_validation", "walk_forward"]
+    },
+    {
+      "id": "archive.game_processing",
+      "repo": "HTML5GameArchive/gfiles",
+      "tags": ["archive", "games", "processing"],
+      "execution": "agent",
+      "verification": ["integrity", "regression"]
+    }
+  ]
+}
