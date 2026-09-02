@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "capability": {
+    "id": "core.fleet_network",
+    "provider": "aegis",
+    "kind": "infrastructure",
+    "tags": ["fleet", "network", "tailscale", "scheduling", "distributed_execution"],
+    "execution": "internal",
+    "verification": ["node_trust", "network_policy", "capability_match", "evidence"]
+  }
+}
