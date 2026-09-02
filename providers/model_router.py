@@ -20,14 +20,17 @@ class ModelRoute:
 
 class ModelRouter:
     """Select the best compatible approved model using explicit routing policy."""
-    def __init__(self, providers: list[ModelProvider]):
+    def __init__(self, providers: list[ModelProvider], provider_specs: dict[str, dict[str, Any]] | None = None):
         self.providers = {p.provider_id: p for p in providers}
+        self.provider_specs = provider_specs or {}
 
     def rank(self, request: RoutingRequest) -> list[CandidateScore]:
         ranked: list[CandidateScore] = []
         for provider in self.providers.values():
+            spec = {"id": provider.provider_id, "external": False, "modalities": ["text"]}
+            spec.update(self.provider_specs.get(provider.provider_id, {}))
             for model in provider.models():
-                candidate = score_candidate({"id": provider.provider_id, **model.get("provider", {})}, model, request)
+                candidate = score_candidate(spec, model, request)
                 if candidate:
                     ranked.append(candidate)
         return sorted(ranked, key=lambda c: (-c.score, c.provider, c.model))
