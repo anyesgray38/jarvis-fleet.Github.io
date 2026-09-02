@@ -1,0 +1,22 @@
+{
+  "network": {
+    "provider": "tailscale",
+    "allow_internet": true,
+    "allow_exit_nodes": true,
+    "allow_public_bind": false,
+    "approved_exit_nodes": []
+  },
+  "nodes": [
+    {
+      "node_id": "example-linux-worker",
+      "address": "100.x.y.z",
+      "network": "tailscale",
+      "role": "worker",
+      "trust": "verified",
+      "status": "connected",
+      "capabilities": ["core.mcp_execution", "core.model_inference"],
+      "modalities": ["text"],
+      "labels": ["linux", "compute"]
+    }
+  ]
+}
