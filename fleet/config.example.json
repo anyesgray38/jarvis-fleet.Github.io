@@ -6,6 +6,17 @@
     "allow_public_bind": false,
     "approved_exit_nodes": []
   },
+  "enrollment": {
+    "network_allowlist": ["tailscale"],
+    "bootstrap_token_env": "AEGIS_FLEET_BOOTSTRAP_TOKEN",
+    "new_nodes_start_untrusted": true,
+    "require_attestation_before_execution": true
+  },
+  "signing": {
+    "algorithm": "HMAC-SHA256",
+    "secret_env": "AEGIS_FLEET_NODE_SECRET",
+    "max_request_age_seconds": 60
+  },
   "nodes": [
     {
       "node_id": "example-linux-worker",
