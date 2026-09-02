@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "default": {
+    "require_security_scan": true,
+    "block_incomplete_scan": true,
+    "max_risk_score": 50,
+    "blocked_severities": ["HIGH", "CRITICAL"]
+  },
+  "capabilities": {}
+}
