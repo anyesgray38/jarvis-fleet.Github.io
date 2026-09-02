@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "network": {
+    "provider": "tailscale",
+    "private_overlay_preferred": true,
+    "allow_public_bind": false,
+    "allow_exit_nodes": true
+  },
+  "nodes": [],
+  "admission": {
+    "membership_is_not_trust": true,
+    "required_trust": ["trusted", "verified"]
+  }
+}
