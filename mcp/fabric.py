@@ -1,11 +1,13 @@
 """Governed execution fabric for arbitrary MCP servers."""
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
 from .admission import AdmissionController, AdmissionDecision
 from .client import McpClient, StdioTransport, StreamableHttpTransport
+from .result_store import MCPResultStore, ResultEnvelope
 
 
 @dataclass
@@ -30,10 +32,12 @@ class McpCapabilityFabric:
         admission: AdmissionController | None = None,
         policy: Callable[[dict[str, Any], dict[str, Any]], None] | None = None,
         evidence: Any | None = None,
+        result_store: MCPResultStore | None = None,
     ) -> None:
         self.admission = admission or AdmissionController()
         self.policy = policy
         self.evidence = evidence
+        self.result_store = result_store or MCPResultStore()
         self._servers: dict[str, RegisteredServer] = {}
 
     def register(self, spec: dict[str, Any]) -> None:
@@ -76,22 +80,24 @@ class McpCapabilityFabric:
 
     def list_capabilities(self, *, query: str | None = None, approved_only: bool = True) -> list[dict[str, Any]]:
         rows: list[dict[str, Any]] = []
-        normalized = (query or "").lower().strip()
+        tokens = _tokens(query or "")
         for server_id, server in self._servers.items():
             if approved_only and not (server.admission and server.admission.approved):
                 continue
             for tool in server.tools:
-                haystack = f"{server_id} {tool.get('name', '')} {tool.get('description', '')}".lower()
-                if not normalized or normalized in haystack:
-                    rows.append({
-                        "server": server_id,
-                        "tool": str(tool.get("name", "")),
-                        "title": tool.get("title"),
-                        "description": tool.get("description", ""),
-                        "input_schema": tool.get("inputSchema", {}),
-                        "permissions": list(server.admission.permissions) if server.admission else [],
-                    })
-        return sorted(rows, key=lambda x: (x["server"], x["tool"]))
+                score = _relevance(tokens, server_id, tool)
+                if query and score <= 0:
+                    continue
+                rows.append({
+                    "server": server_id,
+                    "tool": str(tool.get("name", "")),
+                    "title": tool.get("title"),
+                    "description": tool.get("description", ""),
+                    "input_schema": tool.get("inputSchema", {}),
+                    "permissions": list(server.admission.permissions) if server.admission else [],
+                    "relevance": score,
+                })
+        return sorted(rows, key=lambda x: (-x["relevance"], x["server"], x["tool"]))
 
     def invoke(self, server_id: str, tool: str, arguments: dict[str, Any] | None = None, *, timeout: float = 30.0) -> dict[str, Any]:
         server = self._get(server_id)
@@ -108,6 +114,20 @@ class McpCapabilityFabric:
         self._record("mcp.tool.completed", server_id, {"tool": tool, "result_type": type(result).__name__})
         return result
 
+    def invoke_bounded(self, server_id: str, tool: str, arguments: dict[str, Any] | None = None, *, timeout: float = 30.0) -> ResultEnvelope:
+        """Invoke a tool but keep oversized output behind a retrievable handle."""
+        result = self.invoke(server_id, tool, arguments, timeout=timeout)
+        envelope = self.result_store.envelope(result)
+        self._record(
+            "mcp.result.bounded",
+            server_id,
+            {"tool": tool, "sha256": envelope.sha256, "serialized_bytes": envelope.serialized_bytes, "truncated": envelope.truncated},
+        )
+        return envelope
+
+    def read_more(self, handle: str, *, offset: int = 0, length: int | None = None) -> str:
+        return self.result_store.read_more(handle, offset=offset, length=length)
+
     def close(self) -> None:
         for server in self._servers.values():
             server.client.close()
@@ -121,3 +141,20 @@ class McpCapabilityFabric:
     def _record(self, event: str, server_id: str, data: dict[str, Any]) -> None:
         if self.evidence is not None:
             self.evidence.append({"event": event, "server_id": server_id, **data})
+
+
+def _tokens(text: str) -> set[str]:
+    return {token for token in re.findall(r"[a-z0-9_]+", text.lower()) if len(token) > 1}
+
+
+def _relevance(tokens: set[str], server_id: str, tool: dict[str, Any]) -> float:
+    if not tokens:
+        return 1.0
+    name_tokens = _tokens(str(tool.get("name", "")))
+    description_tokens = _tokens(str(tool.get("description", "")))
+    server_tokens = _tokens(server_id)
+    score = 0.0
+    score += 3.0 * len(tokens & name_tokens)
+    score += 2.0 * len(tokens & server_tokens)
+    score += 1.0 * len(tokens & description_tokens)
+    return score
