@@ -1,10 +1,10 @@
 {
-  "version": 2,
-  "purpose": "Domain-agnostic capability registry for Jarvis",
+  "version": 3,
+  "purpose": "Domain-agnostic capability registry for AEGIS",
   "capabilities": [
     {
       "id": "core.task_orchestration",
-      "provider": "jarvis",
+      "provider": "aegis",
       "kind": "core",
       "tags": ["planning", "orchestration"],
       "execution": "internal",
@@ -12,7 +12,7 @@
     },
     {
       "id": "core.web_research",
-      "provider": "jarvis",
+      "provider": "aegis",
       "kind": "core",
       "tags": ["research", "web", "evidence"],
       "execution": "agent",
@@ -20,7 +20,7 @@
     },
     {
       "id": "core.software_engineering",
-      "provider": "jarvis",
+      "provider": "aegis",
       "kind": "core",
       "tags": ["coding", "repository", "testing"],
       "execution": "agent",
@@ -28,7 +28,7 @@
     },
     {
       "id": "core.browser_automation",
-      "provider": "jarvis",
+      "provider": "aegis",
       "kind": "core",
       "tags": ["browser", "automation", "web"],
       "execution": "agent",
@@ -36,11 +36,19 @@
     },
     {
       "id": "core.memory",
-      "provider": "jarvis",
+      "provider": "aegis",
       "kind": "core",
       "tags": ["memory", "retrieval", "context"],
       "execution": "internal",
       "verification": ["provenance", "retrieval_consistency"]
+    },
+    {
+      "id": "core.model_inference",
+      "provider": "localai",
+      "kind": "infrastructure",
+      "tags": ["inference", "local", "multimodal", "llm"],
+      "execution": "provider",
+      "verification": ["provider_health", "response_schema"]
     },
     {
       "id": "logistics.route_plan",
