@@ -1,0 +1,79 @@
+{
+  "version": 1,
+  "source_catalog": "https://github.com/punkpeye/awesome-mcp-servers",
+  "purpose": "Research-derived high-value MCP capability profiles; the full catalog remains dynamically parseable.",
+  "servers": [
+    {
+      "id": "mcp.1mcp",
+      "name": "1MCP",
+      "repository": "https://github.com/1mcp-app/agent",
+      "category": "Aggregators",
+      "upgrade": ["unified_runtime", "progressive_discovery", "presets", "lazy_loading"],
+      "trust": "candidate",
+      "transport": "stdio_or_streamable_http"
+    },
+    {
+      "id": "mcp.context_firewall",
+      "name": "Context Firewall",
+      "repository": "https://github.com/Alepha188838884/context-firewall",
+      "category": "Aggregators",
+      "upgrade": ["progressive_discovery", "output_compression", "full_output_retrieval", "tool_surface_reduction"],
+      "trust": "candidate",
+      "transport": "stdio"
+    },
+    {
+      "id": "mcp.mcpqueen",
+      "name": "MCP Queen",
+      "repository": "https://github.com/mcpqueen/mcpqueen",
+      "category": "Monitoring",
+      "upgrade": ["live_probe", "evidence_backed_grading", "trust_receipts", "continuous_reverification"],
+      "trust": "candidate",
+      "transport": "streamable_http"
+    },
+    {
+      "id": "mcp.playwright",
+      "name": "Playwright MCP",
+      "repository": "https://github.com/microsoft/playwright-mcp",
+      "category": "Browser Automation",
+      "upgrade": ["accessibility_tree", "deterministic_browser_actions", "self_healing_test_loops"],
+      "trust": "candidate",
+      "transport": "stdio_or_streamable_http"
+    },
+    {
+      "id": "mcp.context7",
+      "name": "Context7",
+      "repository": "https://github.com/upstash/context7",
+      "category": "Research",
+      "upgrade": ["fresh_documentation", "version_aware_retrieval", "coding_context"],
+      "trust": "candidate",
+      "transport": "stdio_or_streamable_http"
+    },
+    {
+      "id": "mcp.filesystem",
+      "name": "MCP Filesystem",
+      "repository": "https://github.com/modelcontextprotocol/servers",
+      "category": "File Systems",
+      "upgrade": ["scoped_filesystem_access", "local_context"],
+      "trust": "candidate",
+      "transport": "stdio"
+    },
+    {
+      "id": "mcp.github",
+      "name": "GitHub MCP Server",
+      "repository": "https://github.com/modelcontextprotocol/servers",
+      "category": "Version Control",
+      "upgrade": ["repository_context", "issue_and_pr_operations", "code_hosting"],
+      "trust": "candidate",
+      "transport": "stdio"
+    },
+    {
+      "id": "mcp.memory",
+      "name": "MCP Memory",
+      "repository": "https://github.com/modelcontextprotocol/servers",
+      "category": "Knowledge & Memory",
+      "upgrade": ["knowledge_graph", "persistent_context", "retrieval"],
+      "trust": "candidate",
+      "transport": "stdio"
+    }
+  ]
+}
