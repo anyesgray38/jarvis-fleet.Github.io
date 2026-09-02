@@ -1,23 +1,68 @@
 {
-  "version": 1,
+  "version": 2,
+  "purpose": "Domain-agnostic capability registry for Jarvis",
   "capabilities": [
     {
+      "id": "core.task_orchestration",
+      "provider": "jarvis",
+      "kind": "core",
+      "tags": ["planning", "orchestration"],
+      "execution": "internal",
+      "verification": ["contract", "state_consistency"]
+    },
+    {
+      "id": "core.web_research",
+      "provider": "jarvis",
+      "kind": "core",
+      "tags": ["research", "web", "evidence"],
+      "execution": "agent",
+      "verification": ["source_provenance", "cross_check"]
+    },
+    {
+      "id": "core.software_engineering",
+      "provider": "jarvis",
+      "kind": "core",
+      "tags": ["coding", "repository", "testing"],
+      "execution": "agent",
+      "verification": ["tests", "diff_review", "self_audit"]
+    },
+    {
+      "id": "core.browser_automation",
+      "provider": "jarvis",
+      "kind": "core",
+      "tags": ["browser", "automation", "web"],
+      "execution": "agent",
+      "verification": ["task_state", "visual_check"]
+    },
+    {
+      "id": "core.memory",
+      "provider": "jarvis",
+      "kind": "core",
+      "tags": ["memory", "retrieval", "context"],
+      "execution": "internal",
+      "verification": ["provenance", "retrieval_consistency"]
+    },
+    {
       "id": "logistics.route_plan",
-      "repo": "anyesgray38/shark-logistics",
+      "provider": "anyesgray38/shark-logistics",
+      "kind": "domain",
       "tags": ["logistics", "routing", "customer"],
       "execution": "agent",
       "verification": ["schema", "route_consistency", "independent_check"]
     },
     {
       "id": "trading.smc_research",
-      "repo": "shark-smc-engine",
+      "provider": "shark-smc-engine",
+      "kind": "domain",
+      "status": "unresolved_provider",
       "tags": ["trading", "research", "smc"],
       "execution": "agent",
       "verification": ["data_provenance", "statistical_validation", "walk_forward"]
     },
     {
       "id": "archive.game_processing",
-      "repo": "HTML5GameArchive/gfiles",
+      "provider": "HTML5GameArchive/gfiles",
+      "kind": "domain",
       "tags": ["archive", "games", "processing"],
       "execution": "agent",
       "verification": ["integrity", "regression"]
