@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "purpose": "Domain-agnostic capability registry for AEGIS",
   "capabilities": [
     {
@@ -49,6 +49,22 @@
       "tags": ["inference", "local", "multimodal", "llm"],
       "execution": "provider",
       "verification": ["provider_health", "response_schema"]
+    },
+    {
+      "id": "core.mcp_discovery",
+      "provider": "aegis",
+      "kind": "infrastructure",
+      "tags": ["mcp", "discovery", "capability", "progressive_disclosure"],
+      "execution": "internal",
+      "verification": ["catalog_integrity", "schema_validation", "security_admission"]
+    },
+    {
+      "id": "core.mcp_execution",
+      "provider": "aegis",
+      "kind": "infrastructure",
+      "tags": ["mcp", "tools", "execution", "evidence"],
+      "execution": "provider",
+      "verification": ["admission", "policy", "evidence", "result_audit"]
     },
     {
       "id": "logistics.route_plan",
