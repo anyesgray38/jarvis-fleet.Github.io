@@ -1,8 +1,8 @@
 import json
 
-from jarvis.audit import audit_result
 from jarvis.capabilities import CapabilityRegistry
 from jarvis.dispatcher import Dispatcher
+from jarvis.workflow import WorkflowPlan
 from security.policy import Policy, PolicyDenied
 from security.skillspector import admit, parse_result
 
@@ -77,3 +77,31 @@ def test_dispatcher_rejects_failed_audit(tmp_path):
     result = dispatcher.dispatch(task, security={"execution_successful": True, "risk_score": 0, "severity": "LOW", "approved": True})
     assert result.status == "rejected"
     assert result.audit["passed"] is False
+
+
+def test_dispatcher_runs_workflow_through_governed_tasks(tmp_path):
+    calls = []
+    evidence = []
+    dispatcher = Dispatcher(
+        _registry(tmp_path),
+        _policy(tmp_path),
+        lambda task, capability: calls.append(task) or {"ok": True, "value": task["input"].get("value", "")},
+        checks={"result_ok": lambda task, result: (result.get("ok") is True, "result ok")},
+        evidence=evidence,
+    )
+    plan = WorkflowPlan.from_dict({
+        "workflow_id": "wf-1",
+        "objective": "execute dependent tasks",
+        "steps": [
+            {"id": "first", "capability": "test.echo", "input": {"value": "hello"}, "verification": {"required": True, "checks": ["result_ok"]}},
+            {"id": "second", "capability": "test.echo", "depends_on": ["first"], "input": {"value": "${first.value}"}, "verification": {"required": True, "checks": ["result_ok"]}},
+        ],
+    })
+    result = dispatcher.dispatch_workflow(
+        plan,
+        security={"execution_successful": True, "risk_score": 0, "severity": "LOW", "approved": True},
+    )
+    assert result.status == "passed"
+    assert [call["input"]["value"] for call in calls] == ["hello", "hello"]
+    assert evidence[0]["event"] == "workflow.started"
+    assert evidence[-1]["event"] == "workflow.completed"
