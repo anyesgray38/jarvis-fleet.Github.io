@@ -8,7 +8,10 @@ from actions.fabric import ActionContext, ActionError, default_fabric
 class ActionFabricTests(unittest.TestCase):
     def test_default_actions_are_allow_listed(self):
         fabric = default_fabric()
-        self.assertEqual(fabric.available(), ["filesystem.read", "filesystem.write"])
+        self.assertEqual(
+            fabric.available(),
+            ["filesystem.read", "filesystem.write", "website.create"],
+        )
 
     def test_write_and_read_stay_inside_workspace(self):
         with tempfile.TemporaryDirectory() as directory:
