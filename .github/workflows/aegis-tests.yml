@@ -11,6 +11,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Reject forbidden hosted deployment references
+        run: |
+          if grep -RniE 'vercel(\.com)?' . --exclude-dir=.git; then
+            echo "Forbidden hosted deployment reference detected. AEGIS is Tailscale/self-hosted only."
+            exit 1
+          fi
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
