@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "purpose": "Domain-agnostic capability registry for AEGIS",
   "capabilities": [
     {
@@ -25,6 +25,14 @@
       "tags": ["coding", "repository", "testing"],
       "execution": "agent",
       "verification": ["tests", "diff_review", "self_audit"]
+    },
+    {
+      "id": "core.website_generation",
+      "provider": "aegis",
+      "kind": "core",
+      "tags": ["website", "frontend", "coding", "project"],
+      "execution": "agent",
+      "verification": ["filesystem_integrity", "build_validation", "browser_check", "self_audit"]
     },
     {
       "id": "core.browser_automation",
