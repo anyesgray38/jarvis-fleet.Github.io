@@ -1,0 +1,74 @@
+{
+  "version": 1,
+  "purpose": "Allow-listed actions available to AEGIS agents",
+  "actions": [
+    {
+      "id": "filesystem.read",
+      "risk": "read",
+      "execution": "agent",
+      "verification": ["path_containment", "size_limit"]
+    },
+    {
+      "id": "filesystem.write",
+      "risk": "write",
+      "execution": "agent",
+      "verification": ["path_containment", "size_limit", "evidence"]
+    },
+    {
+      "id": "shell.execute",
+      "risk": "high",
+      "execution": "agent",
+      "status": "policy_gated",
+      "verification": ["allowlist", "timeout", "exit_code", "evidence"]
+    },
+    {
+      "id": "project.create",
+      "risk": "write",
+      "execution": "agent",
+      "status": "planned",
+      "verification": ["workspace", "build", "self_audit"]
+    },
+    {
+      "id": "project.build",
+      "risk": "compute",
+      "execution": "agent",
+      "status": "planned",
+      "verification": ["exit_code", "artifact_integrity"]
+    },
+    {
+      "id": "project.test",
+      "risk": "compute",
+      "execution": "agent",
+      "status": "planned",
+      "verification": ["test_results", "regression"]
+    },
+    {
+      "id": "git.commit",
+      "risk": "write",
+      "execution": "agent",
+      "status": "planned",
+      "verification": ["diff_review", "identity", "evidence"]
+    },
+    {
+      "id": "browser.test",
+      "risk": "external",
+      "execution": "agent",
+      "status": "planned",
+      "verification": ["task_state", "visual_check"]
+    },
+    {
+      "id": "website.create",
+      "risk": "write",
+      "execution": "agent",
+      "status": "planned",
+      "verification": ["build", "browser_test", "security_scan", "self_audit"]
+    },
+    {
+      "id": "website.deploy",
+      "risk": "external",
+      "execution": "agent",
+      "status": "policy_gated",
+      "verification": ["deployment_state", "health_check", "rollback_ready"]
+    }
+  ]
+}
