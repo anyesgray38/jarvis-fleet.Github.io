@@ -1,43 +1,128 @@
 'use client'
-import { useCallback, useEffect, useState } from 'react'
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
 
-const nav=['Overview','Tasks','Agents','MCP Capabilities','Models','Memory','Security','Verification','Evidence','Settings']
-const pipeline=['Plan','Security','Dispatch','Execute','Verify','Audit','Publish']
-type Agent={id:number;hostname:string;os:string;ip:string;alive:boolean;tags:string[]}
-type Job={id:number;hostname:string;cmd:string;status:string;created_at:string;completed_at:string|null;result:unknown}
-type State={connected:boolean;upstreamConfigured:boolean;agents:Agent[];jobs:Job[];error:string|null;fetchedAt:string}
+const nav = ['Overview', 'Tasks', 'Agents', 'MCP Capabilities', 'Models', 'Memory', 'Security', 'Verification', 'Evidence', 'Settings']
+const pipeline = ['Plan', 'Security', 'Dispatch', 'Execute', 'Verify', 'Audit', 'Publish']
+type Agent = { id: number; hostname: string; os: string; ip: string; alive: boolean; tags: string[] }
+type Job = { id: number; hostname: string; cmd: string; status: string; created_at: string; completed_at: string | null; result: unknown }
+type State = { connected: boolean; upstreamConfigured: boolean; agents: Agent[]; jobs: Job[]; error: string | null; fetchedAt: string }
 
-const initial:State={connected:false,upstreamConfigured:false,agents:[],jobs:[],error:null,fetchedAt:''}
+const initial: State = { connected: false, upstreamConfigured: false, agents: [], jobs: [], error: null, fetchedAt: '' }
 
-export default function Home(){
- const [active,setActive]=useState('Overview')
- const [data,setData]=useState(initial)
- const [loading,setLoading]=useState(true)
- const refresh=useCallback(async()=>{
-  try{const r=await fetch('/api/control-plane',{cache:'no-store'}); const d=await r.json(); setData(d)}
-  catch{setData({...initial,error:'Dashboard API unavailable'})}
-  finally{setLoading(false)}
- },[])
- useEffect(()=>{refresh(); const id=setInterval(refresh,5000); return()=>clearInterval(id)},[refresh])
- const activeJobs=data.jobs.filter(j=>['running','queued'].includes(j.status)).length
- const verifiedAgents=data.agents.filter(a=>a.alive).length
- const jobs=data.jobs.slice(-8).reverse()
- return <div className="shell">
-  <aside className="sidebar"><div className="brand">AEGIS<span>AUTONOMOUS INTELLIGENCE</span></div><nav className="nav">{nav.map(n=><button key={n} className={active===n?'active':''} onClick={()=>setActive(n)}>{n}</button>)}</nav><div className="footer">CONTROL PLANE v1.0<br/>{data.connected?'UPSTREAM CONNECTED':'UPSTREAM OFFLINE'}</div></aside>
-  <main className="main">
-   <header className="top"><div><div className="eyebrow">{active}</div><div className="title">AEGIS Control Center</div><div className="muted">Autonomous Execution, Governance & Intelligence System</div></div><div className="status"><i className={data.connected?'dot':'dot off'}/>{data.connected?'Systems connected':'Demo / disconnected'}</div></header>
-   {!data.connected&&<div className="notice">{data.error||'Set AEGIS_ORCHESTRATOR_URL on the server to connect this dashboard to the AEGIS orchestrator.'}</div>}
-   <section className="grid">
-    <div className="card"><div className="muted">ACTIVE TASKS</div><div className="metric">{String(activeJobs).padStart(2,'0')}</div><div className="muted">live orchestrator jobs</div></div>
-    <div className="card"><div className="muted">FLEET NODES</div><div className="metric">{String(verifiedAgents).padStart(2,'0')}</div><div className="muted">connected agents</div></div>
-    <div className="card"><div className="muted">JOBS RECORDED</div><div className="metric">{data.jobs.length}</div><div className="muted">from orchestrator queue</div></div>
-    <div className="card"><div className="muted">LAST SYNC</div><div className="metric small">{data.fetchedAt?new Date(data.fetchedAt).toLocaleTimeString():loading?'…':'—'}</div><div className="muted">5 second polling</div></div>
-    <div className="card wide"><div className="eyebrow">Execution pipeline</div><div className="pipeline">{pipeline.map((p,i)=><span key={p} className="pipeline-item"><div className="step"><b>{p}</b><small>{i<2?'governed':i===2?'selected':'pending'}</small></div>{i<pipeline.length-1&&<span className="arrow">→</span>}</span>)}</div></div>
-    <div className="card wide"><div className="eyebrow">Live task graph</div><div style={{marginTop:12}}>{jobs.length?jobs.map(j=><div className="row" key={j.id}><div><strong>Job #{j.id} · {j.hostname}</strong><div className="muted">{j.cmd}</div></div><span className="badge">{j.status.toUpperCase()}</span></div>):<div className="empty">No orchestrator jobs available.</div>}</div></div>
-    <div className="card"><div className="eyebrow">Fleet</div><div className="fleet" style={{marginTop:12}}>{data.agents.length?data.agents.map(a=><div className="node" key={a.id}><div><strong>{a.hostname}</strong><br/><span>{a.os} · {a.ip}</span></div><i className={a.alive?'dot':'dot off'}/></div>):<div className="empty">No agents connected.</div>}</div></div>
-    <div className="card"><div className="eyebrow">Governance</div><div className="row"><span>Policy engine</span><span className="badge">ENFORCING</span></div><div className="row"><span>Security admission</span><span className="badge">PASS</span></div><div className="row"><span>Self-audit</span><span className="badge">ACTIVE</span></div><div className="row"><span>Evidence chain</span><span className="badge">SEALED</span></div></div>
-   </section>
-   <div className="footer">AEGIS · Live control-plane telemetry · MCP governed · LocalAI preferred · Tailscale-aware</div>
-  </main>
- </div>
+export default function Home() {
+  const [active, setActive] = useState('Overview')
+  const [data, setData] = useState(initial)
+  const [loading, setLoading] = useState(true)
+  const [actionMessage, setActionMessage] = useState<string | null>(null)
+
+  const refresh = useCallback(async () => {
+    try {
+      const r = await fetch('/api/control-plane', { cache: 'no-store' })
+      const d = await r.json()
+      setData(d)
+    } catch {
+      setData({ ...initial, error: 'Dashboard API unavailable' })
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    refresh()
+    const id = setInterval(refresh, 5000)
+    return () => clearInterval(id)
+  }, [refresh])
+
+  const activeJobs = data.jobs.filter(j => ['running', 'queued'].includes(j.status)).length
+  const liveAgents = data.agents.filter(a => a.alive).length
+  const recentJobs = useMemo(() => data.jobs.slice(-8).reverse(), [data.jobs])
+
+  async function action(payload: Record<string, unknown>) {
+    setActionMessage(null)
+    try {
+      const r = await fetch('/api/control-plane', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+      const d = await r.json()
+      if (!r.ok || !d.ok) throw new Error(d.error || 'Action failed')
+      setActionMessage('Action accepted by orchestrator')
+      await refresh()
+    } catch (e) {
+      setActionMessage(e instanceof Error ? e.message : 'Action failed')
+    }
+  }
+
+  return <div className="shell">
+    <aside className="sidebar">
+      <div className="brand">AEGIS<span>AUTONOMOUS INTELLIGENCE</span></div>
+      <nav className="nav">{nav.map(n => <button key={n} className={active === n ? 'active' : ''} onClick={() => { setActive(n); setActionMessage(null) }}>{n}</button>)}</nav>
+      <div className="footer">CONTROL PLANE v1.0<br />{data.connected ? 'UPSTREAM CONNECTED' : 'UPSTREAM OFFLINE'}</div>
+    </aside>
+
+    <main className="main">
+      <header className="top">
+        <div><div className="eyebrow">{active}</div><div className="title">AEGIS Control Center</div><div className="muted">Autonomous Execution, Governance & Intelligence System</div></div>
+        <div className="status"><i className={data.connected ? 'dot' : 'dot off'} />{data.connected ? 'Systems connected' : 'Demo / disconnected'}</div>
+      </header>
+
+      {!data.connected && <div className="notice">{data.error || 'Set AEGIS_ORCHESTRATOR_URL on the server to connect this dashboard to the AEGIS orchestrator.'}</div>}
+      {actionMessage && <div className={actionMessage.includes('accepted') ? 'notice success' : 'notice'}>{actionMessage}</div>}
+
+      {active === 'Overview' && <Overview data={data} activeJobs={activeJobs} liveAgents={liveAgents} recentJobs={recentJobs} loading={loading} />}
+      {active === 'Tasks' && <Tasks agents={data.agents} jobs={data.jobs} onAction={action} />}
+      {active === 'Agents' && <Agents agents={data.agents} onAction={action} />}
+      {active === 'MCP Capabilities' && <CapabilityPanel />}
+      {active === 'Models' && <ModelsPanel />}
+      {active === 'Memory' && <MemoryPanel />}
+      {active === 'Security' && <SecurityPanel />}
+      {active === 'Verification' && <VerificationPanel jobs={data.jobs} />}
+      {active === 'Evidence' && <EvidencePanel jobs={data.jobs} />}
+      {active === 'Settings' && <SettingsPanel connected={data.connected} />}
+
+      <div className="footer">AEGIS · Live control-plane telemetry · MCP governed · LocalAI preferred · Tailscale-aware</div>
+    </main>
+  </div>
 }
+
+function Overview({ data, activeJobs, liveAgents, recentJobs, loading }: { data: State; activeJobs: number; liveAgents: number; recentJobs: Job[]; loading: boolean }) {
+  return <section className="grid">
+    <Metric label="ACTIVE TASKS" value={String(activeJobs).padStart(2, '0')} note="live orchestrator jobs" />
+    <Metric label="FLEET NODES" value={String(liveAgents).padStart(2, '0')} note="connected agents" />
+    <Metric label="JOBS RECORDED" value={String(data.jobs.length)} note="from orchestrator queue" />
+    <Metric label="LAST SYNC" value={data.fetchedAt ? new Date(data.fetchedAt).toLocaleTimeString() : loading ? '…' : '—'} note="5 second polling" small />
+    <div className="card wide"><div className="eyebrow">Execution pipeline</div><div className="pipeline">{pipeline.map((p, i) => <span key={p} className="pipeline-item"><div className="step"><b>{p}</b><small>{i < 2 ? 'governed' : i === 2 ? 'selected' : 'pending'}</small></div>{i < pipeline.length - 1 && <span className="arrow">→</span>}</span>)}</div></div>
+    <div className="card wide"><div className="eyebrow">Live task graph</div><div style={{ marginTop: 12 }}>{recentJobs.length ? recentJobs.map(j => <JobRow key={j.id} job={j} />) : <div className="empty">No orchestrator jobs available.</div>}</div></div>
+    <div className="card"><div className="eyebrow">Fleet</div><div className="fleet" style={{ marginTop: 12 }}>{data.agents.length ? data.agents.map(a => <AgentRow key={a.id} agent={a} />) : <div className="empty">No agents connected.</div>}</div></div>
+    <div className="card"><div className="eyebrow">Governance</div><div className="row"><span>Policy engine</span><span className="badge">ENFORCING</span></div><div className="row"><span>Security admission</span><span className="badge">PASS</span></div><div className="row"><span>Self-audit</span><span className="badge">ACTIVE</span></div><div className="row"><span>Evidence chain</span><span className="badge">SEALED</span></div></div>
+  </section>
+}
+
+function Metric({ label, value, note, small }: { label: string; value: string; note: string; small?: boolean }) {
+  return <div className="card"><div className="muted">{label}</div><div className={small ? 'metric small' : 'metric'}>{value}</div><div className="muted">{note}</div></div>
+}
+
+function Tasks({ agents, jobs, onAction }: { agents: Agent[]; jobs: Job[]; onAction: (p: Record<string, unknown>) => Promise<void> }) {
+  const [hostname, setHostname] = useState(agents[0]?.hostname || '')
+  const [cmd, setCmd] = useState('uname -a')
+  const [busy, setBusy] = useState(false)
+  const submit = async (e: FormEvent) => { e.preventDefault(); setBusy(true); await onAction({ action: 'queue', hostname, cmd }); setBusy(false) }
+  return <section className="grid">
+    <div className="card wide"><div className="eyebrow">Dispatch task</div><h2>Queue an operator task</h2><p className="muted">Routes the task through the local orchestrator. Keep this control plane on the Tailscale network.</p><form className="form" onSubmit={submit}><label>Target node<select value={hostname} onChange={e => setHostname(e.target.value)}>{agents.map(a => <option key={a.id} value={a.hostname}>{a.hostname}</option>)}</select></label><label>Command<input value={cmd} onChange={e => setCmd(e.target.value)} maxLength={4000} /></label><button className="primary" disabled={!hostname || !cmd || busy}>{busy ? 'Dispatching…' : 'Dispatch task'}</button></form></div>
+    <div className="card wide"><div className="eyebrow">Queue</div>{jobs.length ? jobs.slice().reverse().map(j => <JobRow key={j.id} job={j} />) : <div className="empty">No tasks recorded.</div>}</div>
+  </section>
+}
+
+function Agents({ agents, onAction }: { agents: Agent[]; onAction: (p: Record<string, unknown>) => Promise<void> }) {
+  const [tag, setTag] = useState('worker')
+  return <section className="grid"><div className="card wide"><div className="eyebrow">Fleet registry</div>{agents.length ? agents.map(a => <div className="agent-control" key={a.id}><AgentRow agent={a} /><div className="inline-form"><input value={tag} onChange={e => setTag(e.target.value)} placeholder="tag" maxLength={32} /><button onClick={() => onAction({ action: 'tag', agent_id: a.id, tags: [...a.tags, tag] })} disabled={!tag.trim()}>Add tag</button></div></div>) : <div className="empty">No agents connected.</div>}</div><div className="card"><div className="eyebrow">Admission</div><div className="row"><span>Identity</span><span className="badge">REQUIRED</span></div><div className="row"><span>Attestation</span><span className="badge">REQUIRED</span></div><div className="row"><span>Network</span><span className="badge">TAILSCALE</span></div></div></section>
+}
+
+function CapabilityPanel() { return <section className="grid"><InfoCard title="MCP Registry" text="MCP servers are discovered, inspected, classified, admitted, and mapped to AEGIS capabilities before execution." items={['Progressive discovery', 'Security admission', 'Capability mapping', 'Fail-closed execution']} /><InfoCard title="Execution boundary" text="MCP tool definitions are treated as untrusted input. AEGIS controls what can be called and records the result." items={['tools/list', 'tools/call', 'Evidence capture', 'Independent verification']} /></section> }
+function ModelsPanel() { return <section className="grid"><InfoCard title="LocalAI" text="Local inference is the preferred model provider for privacy-sensitive workloads on the AEGIS network." items={['OpenAI-compatible endpoint', 'Text / vision / audio / image / video', 'Provider-neutral routing', 'External access only when policy permits']} /><InfoCard title="Model Router" text="Routing decisions can consider modality, tags, local-only policy, latency, cost, and fallback availability." items={['Task constraints', 'Deterministic ranking', 'Fallback providers', 'Policy-aware selection']} /></section> }
+function MemoryPanel() { return <section className="grid"><InfoCard title="AEGIS Memory" text="Memory is separated from execution so agents can retrieve context without gaining unrestricted control of the system." items={['Episodic memory', 'Semantic memory', 'Procedural memory', 'Project memory']} /><InfoCard title="Retrieval boundary" text="Retrieved context should carry provenance and remain subject to verification before it becomes an execution decision." items={['Provenance', 'Relevance ranking', 'Context isolation', 'Verification']} /></section> }
+function SecurityPanel() { return <section className="grid"><InfoCard title="Security Gate" text="The control plane is private by design. Tailscale provides network reachability; AEGIS remains responsible for authorization." items={['Private network', 'Capability admission', 'Policy enforcement', 'Fail closed']} /><InfoCard title="Current posture" text="The browser talks only to the local dashboard API. The orchestrator remains behind the dashboard and is not directly exposed." items={['Dashboard :3000', 'Orchestrator :8888', 'Fleet TLS :4444', 'No public bind']} /></section> }
+function VerificationPanel({ jobs }: { jobs: Job[] }) { return <section className="grid"><InfoCard title="Independent verification" text="Execution results should be checked independently before publication to the user or another agent." items={['Result validation', 'Invariant checks', 'Evidence comparison', 'Escalation on uncertainty']} /><div className="card"><div className="eyebrow">Recent verification surface</div>{jobs.length ? jobs.slice(-6).reverse().map(j => <div className="row" key={j.id}><span>Job #{j.id}</span><span className="badge">{j.status.toUpperCase()}</span></div>) : <div className="empty">No execution results yet.</div>}</div></section> }
+function EvidencePanel({ jobs }: { jobs: Job[] }) { return <section className="grid"><InfoCard title="Evidence chain" text="The dashboard exposes execution history from the orchestrator. A future evidence store will bind events to task IDs, agents, and verification results." items={['Task identity', 'Agent identity', 'Execution result', 'Audit result']} /><div className="card"><div className="eyebrow">Execution history</div>{jobs.length ? jobs.slice().reverse().map(j => <div className="row" key={j.id}><span>#{j.id} · {j.hostname}</span><span className="muted">{new Date(j.created_at).toLocaleString()}</span></div>) : <div className="empty">No evidence events yet.</div>}</div></section> }
+function SettingsPanel({ connected }: { connected: boolean }) { return <section className="grid"><InfoCard title="Runtime" text="The dashboard is designed to run on the private Tailscale network with the orchestrator reachable only from the server process." items={[connected ? 'Orchestrator connected' : 'Orchestrator offline', '5 second telemetry polling', 'Server-side upstream proxy', 'No browser credentials']} /><InfoCard title="Deployment" text="This installation intentionally does not depend on Vercel. The control center runs directly on the AEGIS host." items={['Next.js production server', 'Tailscale access', 'Local process supervision', 'Private network only']} /></section> }
+
+function InfoCard({ title, text, items }: { title: string; text: string; items: string[] }) { return <div className="card"><div className="eyebrow">{title}</div><h2>{title}</h2><p className="muted large">{text}</p>{items.map(item => <div className="row" key={item}><span>{item}</span><span className="badge">READY</span></div>)}</div> }
+function AgentRow({ agent }: { agent: Agent }) { return <div className="node"><div><strong>{agent.hostname}</strong><br /><span>{agent.os} · {agent.ip}{agent.tags.length ? ` · ${agent.tags.join(', ')}` : ''}</span></div><i className={agent.alive ? 'dot' : 'dot off'} /></div> }
+function JobRow({ job }: { job: Job }) { return <div className="row"><div><strong>Job #{job.id} · {job.hostname}</strong><div className="muted">{job.cmd}</div></div><span className="badge">{job.status.toUpperCase()}</span></div> }
