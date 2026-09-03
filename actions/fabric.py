@@ -106,7 +106,10 @@ def shell_execute(context: ActionContext, args: dict[str, Any]) -> dict[str, Any
 
 
 def default_fabric() -> ActionFabric:
+    from .website import website_create
+
     fabric = ActionFabric()
     fabric.register("filesystem.read", filesystem_read)
     fabric.register("filesystem.write", filesystem_write)
+    fabric.register("website.create", website_create)
     return fabric
