@@ -1,8 +1,8 @@
-"""Domain-agnostic Jarvis task lifecycle coordinator.
+"""Domain-agnostic AEGIS task and workflow lifecycle coordinator.
 
-The dispatcher intentionally depends on protocols/callables rather than the
-fleet implementation. This keeps cognition and policy separate from the
-low-level executor.
+The dispatcher depends on protocols/callables rather than the fleet
+implementation. This keeps cognition and policy separate from low-level
+execution while giving workflows a governed path into the same lifecycle.
 """
 from __future__ import annotations
 
@@ -11,6 +11,7 @@ from typing import Any, Callable, Protocol
 
 from .audit import audit_result
 from .capabilities import CapabilityRegistry
+from .workflow import WorkflowPlan, WorkflowRunResult, WorkflowRunner
 from security.policy import Policy, PolicyDenied
 
 
@@ -70,6 +71,30 @@ class Dispatcher:
         except Exception as exc:
             self._record("task.failed", task, {"error": str(exc)})
             return DispatchResult(task_id, "failed", error=str(exc))
+
+    def dispatch_workflow(
+        self,
+        plan: WorkflowPlan,
+        *,
+        security: dict[str, Any] | None = None,
+    ) -> WorkflowRunResult:
+        """Run every workflow step through the governed task dispatcher."""
+        self._record(
+            "workflow.started",
+            {"task_id": plan.workflow_id},
+            {"objective": plan.objective, "steps": len(plan.steps)},
+        )
+        runner = WorkflowRunner(
+            lambda task: self.dispatch(task, security=security),
+            evidence=self.evidence,
+        )
+        result = runner.run(plan)
+        self._record(
+            "workflow.completed",
+            {"task_id": plan.workflow_id},
+            {"status": result.status, "escalated": result.escalated},
+        )
+        return result
 
     def _record(self, event: str, task: dict[str, Any], data: dict[str, Any]) -> None:
         if self.evidence is not None:
