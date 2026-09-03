@@ -1,3 +1,3 @@
-"""Jarvis domain-agnostic control plane."""
+"""AEGIS domain-agnostic control plane."""
 
-__all__ = ["audit", "capabilities", "dispatcher"]
+__all__ = ["audit", "capabilities", "dispatcher", "workflow"]
