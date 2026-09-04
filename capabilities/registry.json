@@ -1,5 +1,5 @@
 {
-  "version": 8,
+  "version": 9,
   "purpose": "Domain-agnostic capability registry for AEGIS",
   "capabilities": [
     {"id":"core.task_orchestration","provider":"aegis","kind":"core","tags":["planning","orchestration"],"execution":"internal","verification":["contract","state_consistency"]},
@@ -27,6 +27,11 @@
     {"id":"trading.paper_execution","provider":"aegis","kind":"domain","tags":["trading","paper","execution","dry_run"],"execution":"internal","verification":["risk_gate","order_contract","state_consistency"]},
     {"id":"trading.backtest","provider":"aegis","kind":"domain","tags":["trading","backtest","research","walk_forward"],"execution":"internal","verification":["determinism","statistics","out_of_sample"]},
     {"id":"trading.bot_orchestration","provider":"aegis","kind":"domain","tags":["trading","bots","fleet","multi_strategy"],"execution":"internal","verification":["risk_gate","isolation","evidence"]},
+    {"id":"trading.market_universe","provider":"aegis","kind":"domain","tags":["trading","markets","forex","equities","indices","crypto","commodities"],"execution":"internal","verification":["schema","instrument_integrity"]},
+    {"id":"trading.strategy_research","provider":"aegis","kind":"domain","tags":["trading","strategies","research","discovery"],"execution":"agent","verification":["hypothesis","backtest","out_of_sample","independent_verification"]},
+    {"id":"trading.regime_research","provider":"aegis","kind":"domain","tags":["trading","regime","macro","conditional"],"execution":"agent","verification":["regime_definition","walk_forward","falsification"]},
+    {"id":"trading.cross_asset_research","provider":"aegis","kind":"domain","tags":["trading","cross_asset","relative_value","correlation"],"execution":"agent","verification":["synchronization","statistical_validation","out_of_sample"]},
+    {"id":"trading.risk_research","provider":"aegis","kind":"domain","tags":["trading","risk","drawdown","position_sizing"],"execution":"internal","verification":["determinism","stress_test","loss_limits"]},
     {"id":"archive.game_processing","provider":"HTML5GameArchive/gfiles","kind":"domain","tags":["archive","games","processing"],"execution":"agent","verification":["integrity","regression"]}
   ]
 }
