@@ -1,5 +1,5 @@
 {
-  "version": 7,
+  "version": 8,
   "purpose": "Domain-agnostic capability registry for AEGIS",
   "capabilities": [
     {"id":"core.task_orchestration","provider":"aegis","kind":"core","tags":["planning","orchestration"],"execution":"internal","verification":["contract","state_consistency"]},
@@ -22,7 +22,11 @@
     {"id":"security.reconnaissance","provider":"aegis","kind":"security","tags":["security","reconnaissance","scope"],"execution":"internal","verification":["evidence","scope_check","self_audit"]},
     {"id":"security.finding_validation","provider":"aegis","kind":"security","tags":["security","validation","false_positive"],"execution":"internal","verification":["independent_verification","evidence","self_audit"]},
     {"id":"logistics.route_plan","provider":"anyesgray38/shark-logistics","kind":"domain","tags":["logistics","routing","customer"],"execution":"agent","verification":["schema","route_consistency","independent_check"]},
-    {"id":"trading.smc_research","provider":"shark-smc-engine","kind":"domain","status":"unresolved_provider","tags":["trading","research","smc"],"execution":"agent","verification":["data_provenance","statistical_validation","walk_forward"]},
+    {"id":"trading.smc_research","provider":"aegis","kind":"domain","status":"implemented","tags":["trading","research","smc","liquidity","fvg","displacement"],"execution":"internal","verification":["data_provenance","statistical_validation","walk_forward","self_audit"]},
+    {"id":"trading.smc_signal","provider":"aegis","kind":"domain","tags":["trading","smc","signals","confluence"],"execution":"internal","verification":["determinism","risk_gate","evidence"]},
+    {"id":"trading.paper_execution","provider":"aegis","kind":"domain","tags":["trading","paper","execution","dry_run"],"execution":"internal","verification":["risk_gate","order_contract","state_consistency"]},
+    {"id":"trading.backtest","provider":"aegis","kind":"domain","tags":["trading","backtest","research","walk_forward"],"execution":"internal","verification":["determinism","statistics","out_of_sample"]},
+    {"id":"trading.bot_orchestration","provider":"aegis","kind":"domain","tags":["trading","bots","fleet","multi_strategy"],"execution":"internal","verification":["risk_gate","isolation","evidence"]},
     {"id":"archive.game_processing","provider":"HTML5GameArchive/gfiles","kind":"domain","tags":["archive","games","processing"],"execution":"agent","verification":["integrity","regression"]}
   ]
 }
