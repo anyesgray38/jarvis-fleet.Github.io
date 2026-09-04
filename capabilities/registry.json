@@ -1,103 +1,28 @@
 {
-  "version": 5,
+  "version": 7,
   "purpose": "Domain-agnostic capability registry for AEGIS",
   "capabilities": [
-    {
-      "id": "core.task_orchestration",
-      "provider": "aegis",
-      "kind": "core",
-      "tags": ["planning", "orchestration"],
-      "execution": "internal",
-      "verification": ["contract", "state_consistency"]
-    },
-    {
-      "id": "core.web_research",
-      "provider": "aegis",
-      "kind": "core",
-      "tags": ["research", "web", "evidence"],
-      "execution": "agent",
-      "verification": ["source_provenance", "cross_check"]
-    },
-    {
-      "id": "core.software_engineering",
-      "provider": "aegis",
-      "kind": "core",
-      "tags": ["coding", "repository", "testing"],
-      "execution": "agent",
-      "verification": ["tests", "diff_review", "self_audit"]
-    },
-    {
-      "id": "core.website_generation",
-      "provider": "aegis",
-      "kind": "core",
-      "tags": ["website", "frontend", "coding", "project"],
-      "execution": "agent",
-      "verification": ["filesystem_integrity", "build_validation", "browser_check", "self_audit"]
-    },
-    {
-      "id": "core.browser_automation",
-      "provider": "aegis",
-      "kind": "core",
-      "tags": ["browser", "automation", "web"],
-      "execution": "agent",
-      "verification": ["task_state", "visual_check"]
-    },
-    {
-      "id": "core.memory",
-      "provider": "aegis",
-      "kind": "core",
-      "tags": ["memory", "retrieval", "context"],
-      "execution": "internal",
-      "verification": ["provenance", "retrieval_consistency"]
-    },
-    {
-      "id": "core.model_inference",
-      "provider": "localai",
-      "kind": "infrastructure",
-      "tags": ["inference", "local", "multimodal", "llm"],
-      "execution": "provider",
-      "verification": ["provider_health", "response_schema"]
-    },
-    {
-      "id": "core.mcp_discovery",
-      "provider": "aegis",
-      "kind": "infrastructure",
-      "tags": ["mcp", "discovery", "capability", "progressive_disclosure"],
-      "execution": "internal",
-      "verification": ["catalog_integrity", "schema_validation", "security_admission"]
-    },
-    {
-      "id": "core.mcp_execution",
-      "provider": "aegis",
-      "kind": "infrastructure",
-      "tags": ["mcp", "tools", "execution", "evidence"],
-      "execution": "provider",
-      "verification": ["admission", "policy", "evidence", "result_audit"]
-    },
-    {
-      "id": "logistics.route_plan",
-      "provider": "anyesgray38/shark-logistics",
-      "kind": "domain",
-      "tags": ["logistics", "routing", "customer"],
-      "execution": "agent",
-      "verification": ["schema", "route_consistency", "independent_check"]
-    },
-    {
-      "id": "trading.smc_research",
-      "provider": "shark-smc-engine",
-      "kind": "domain",
-      "status": "unresolved_provider",
-      "tags": ["trading", "research", "smc"],
-      "execution": "agent",
-      "verification": ["data_provenance", "statistical_validation", "walk_forward"]
-    },
-    {
-      "id": "archive.game_processing",
-      "provider": "HTML5GameArchive/gfiles",
-      "kind": "domain",
-      "tags": ["archive", "games", "processing"],
-      "execution": "agent",
-      "verification": ["integrity", "regression"]
-    }
+    {"id":"core.task_orchestration","provider":"aegis","kind":"core","tags":["planning","orchestration"],"execution":"internal","verification":["contract","state_consistency"]},
+    {"id":"core.web_research","provider":"aegis","kind":"core","tags":["research","web","evidence"],"execution":"agent","verification":["source_provenance","cross_check"]},
+    {"id":"core.software_engineering","provider":"aegis","kind":"core","tags":["coding","repository","testing"],"execution":"agent","verification":["tests","diff_review","self_audit"]},
+    {"id":"core.self_upgrade","provider":"aegis","kind":"core","tags":["self-improvement","repository","testing","audit","governance"],"execution":"internal","verification":["scope_gate","tests","self_audit","human_approval","commit_provenance"]},
+    {"id":"core.website_generation","provider":"aegis","kind":"core","tags":["website","frontend","coding","project"],"execution":"agent","verification":["filesystem_integrity","build_validation","browser_check","self_audit"]},
+    {"id":"core.browser_automation","provider":"aegis","kind":"core","tags":["browser","automation","web"],"execution":"agent","verification":["task_state","visual_check"]},
+    {"id":"core.memory","provider":"aegis","kind":"core","tags":["memory","retrieval","context"],"execution":"internal","verification":["provenance","retrieval_consistency"]},
+    {"id":"core.model_inference","provider":"localai","kind":"infrastructure","tags":["inference","local","multimodal","llm"],"execution":"provider","verification":["provider_health","response_schema"]},
+    {"id":"core.mcp_discovery","provider":"aegis","kind":"infrastructure","tags":["mcp","discovery","capability","progressive_disclosure"],"execution":"internal","verification":["catalog_integrity","schema_validation","security_admission"]},
+    {"id":"core.mcp_execution","provider":"aegis","kind":"infrastructure","tags":["mcp","tools","execution","evidence"],"execution":"provider","verification":["admission","policy","evidence","result_audit"]},
+    {"id":"research.hypothesis_generation","provider":"aegis","kind":"research","tags":["research","hypothesis","falsification"],"execution":"agent","verification":["schema","falsification_criteria","epistemic_review"]},
+    {"id":"research.experiment_design","provider":"aegis","kind":"research","tags":["research","experiments","controls"],"execution":"agent","verification":["schema","control_review","evidence_plan"]},
+    {"id":"research.statistical_analysis","provider":"aegis","kind":"research","tags":["statistics","permutation","analysis"],"execution":"internal","verification":["determinism","method_provenance","independent_review"]},
+    {"id":"research.anomaly_detection","provider":"aegis","kind":"research","tags":["anomaly","contradiction","unknowns"],"execution":"internal","verification":["determinism","evidence"]},
+    {"id":"research.reproduction","provider":"aegis","kind":"research","tags":["reproduction","independence","validation"],"execution":"agent","verification":["independent_implementation","evidence","self_audit"]},
+    {"id":"research.knowledge_promotion","provider":"aegis","kind":"research","tags":["knowledge","epistemic","governance"],"execution":"internal","verification":["epistemic_gate","provenance","conflict_check"]},
+    {"id":"security.web_assessment","provider":"aegis","kind":"security","tags":["security","assessment","http"],"execution":"internal","verification":["evidence","scope_check","independent_verification","self_audit"]},
+    {"id":"security.reconnaissance","provider":"aegis","kind":"security","tags":["security","reconnaissance","scope"],"execution":"internal","verification":["evidence","scope_check","self_audit"]},
+    {"id":"security.finding_validation","provider":"aegis","kind":"security","tags":["security","validation","false_positive"],"execution":"internal","verification":["independent_verification","evidence","self_audit"]},
+    {"id":"logistics.route_plan","provider":"anyesgray38/shark-logistics","kind":"domain","tags":["logistics","routing","customer"],"execution":"agent","verification":["schema","route_consistency","independent_check"]},
+    {"id":"trading.smc_research","provider":"shark-smc-engine","kind":"domain","status":"unresolved_provider","tags":["trading","research","smc"],"execution":"agent","verification":["data_provenance","statistical_validation","walk_forward"]},
+    {"id":"archive.game_processing","provider":"HTML5GameArchive/gfiles","kind":"domain","tags":["archive","games","processing"],"execution":"agent","verification":["integrity","regression"]}
   ]
 }

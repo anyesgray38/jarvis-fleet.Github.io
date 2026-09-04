@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "capabilities": [
+    {
+      "id": "research.hypothesis_generation",
+      "kind": "research",
+      "description": "Generate explicit, testable hypotheses with null hypotheses and falsification criteria",
+      "execution": "agent",
+      "risk": "analysis",
+      "verification": ["schema", "falsification_criteria", "epistemic_review"]
+    },
+    {
+      "id": "research.experiment_design",
+      "kind": "research",
+      "description": "Design controlled experiments with variables, controls, metrics, and evidence requirements",
+      "execution": "agent",
+      "risk": "analysis",
+      "verification": ["schema", "control_review", "evidence_plan"]
+    },
+    {
+      "id": "research.statistical_analysis",
+      "kind": "research",
+      "description": "Run conservative descriptive and permutation-based analysis over recorded observations",
+      "execution": "internal",
+      "risk": "analysis",
+      "verification": ["determinism", "method_provenance", "independent_review"]
+    },
+    {
+      "id": "research.anomaly_detection",
+      "kind": "research",
+      "description": "Detect expectation mismatches, outliers, distribution shifts, contradictions, and undeclared dependencies",
+      "execution": "internal",
+      "risk": "analysis",
+      "verification": ["determinism", "evidence"]
+    },
+    {
+      "id": "research.reproduction",
+      "kind": "research",
+      "description": "Create and evaluate independent reproduction plans for research results",
+      "execution": "agent",
+      "risk": "analysis",
+      "verification": ["independent_implementation", "evidence", "self_audit"]
+    },
+    {
+      "id": "research.knowledge_promotion",
+      "kind": "research",
+      "description": "Promote findings only when verification, confidence, evidence, and independence thresholds are satisfied",
+      "execution": "internal",
+      "risk": "governance",
+      "verification": ["epistemic_gate", "provenance", "conflict_check"]
+    }
+  ]
+}

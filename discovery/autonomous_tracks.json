@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "tracks": [
+    {"id": "reproduction", "goal": "independently reproduce promising findings", "default_priority": 0.9},
+    {"id": "contradiction", "goal": "resolve conflicting evidence and claims", "default_priority": 1.0},
+    {"id": "anomaly", "goal": "investigate unexplained observations and expectation mismatches", "default_priority": 0.8},
+    {"id": "parameter_search", "goal": "systematically explore bounded parameter spaces", "default_priority": 0.7},
+    {"id": "model_comparison", "goal": "compare competing models under identical controls", "default_priority": 0.7},
+    {"id": "code_synthesis", "goal": "generate candidate implementations and benchmark them", "default_priority": 0.6},
+    {"id": "algorithm_discovery", "goal": "search for novel algorithms through constrained experiments", "default_priority": 0.6},
+    {"id": "data_quality", "goal": "detect drift, outliers, hidden dependencies, and provenance gaps", "default_priority": 0.9}
+  ],
+  "autonomy_rules": {
+    "default_mode": "bounded",
+    "max_concurrent_opportunities": 4,
+    "require_evidence": true,
+    "require_independent_verification_for_promotion": true,
+    "no_arbitrary_code_execution": true,
+    "no_destructive_actions": true,
+    "escalate_on_conflict": true
+  }
+}

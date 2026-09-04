@@ -1,10 +1,17 @@
 {
-  "version": 1,
+  "version": 2,
   "default": {
     "require_security_scan": true,
     "block_incomplete_scan": true,
     "max_risk_score": 50,
     "blocked_severities": ["HIGH", "CRITICAL"]
   },
-  "capabilities": {}
+  "capabilities": {
+    "core.self_upgrade": {
+      "require_security_scan": true,
+      "block_incomplete_scan": true,
+      "max_risk_score": 20,
+      "blocked_severities": ["MEDIUM", "HIGH", "CRITICAL"]
+    }
+  }
 }
