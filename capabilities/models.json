@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "models": [
+    {
+      "id": "llmfan46/gemma-3-27b-it-ultra-uncensored-heretic-GGUF:Q4_K_M",
+      "family": "gemma-3-27b",
+      "provider": "lmstudio",
+      "source": "https://huggingface.co/llmfan46/gemma-3-27b-it-ultra-uncensored-heretic-GGUF",
+      "format": "GGUF",
+      "quantization": "Q4_K_M",
+      "modalities": ["text", "vision"],
+      "tags": ["general", "reasoning", "coding", "vision", "local", "chat"],
+      "purposes": ["general", "coding", "research", "security", "audit"],
+      "local_only": true,
+      "experimental": true,
+      "notes": "Community decensored/abliterated Gemma 3 variant. Use only behind AEGIS policy and verification controls."
+    },
+    {
+      "id": "Qwen/Qwen3.8-Flash-Next",
+      "family": "qwen",
+      "provider": "lmstudio",
+      "source": "https://huggingface.co/Qwen/Qwen3.8-Flash-Next",
+      "format": "provider-managed",
+      "modalities": ["text", "vision"],
+      "tags": ["general", "reasoning", "coding", "long-context", "agentic", "local"],
+      "purposes": ["general", "coding", "research", "planning"],
+      "local_only": true,
+      "experimental": true
+    },
+    {
+      "id": "google/gemma-4-31B-it",
+      "family": "gemma-4",
+      "provider": "lmstudio",
+      "source": "https://huggingface.co/google/gemma-4-31B-it",
+      "format": "provider-managed",
+      "modalities": ["text", "vision"],
+      "tags": ["general", "reasoning", "coding", "vision", "local"],
+      "purposes": ["general", "coding", "research", "verification"],
+      "local_only": true,
+      "experimental": true
+    },
+    {
+      "id": "lmstudio/qwen3.8-max-glm5.2-kimi-k3-distillation",
+      "family": "distillation-dataset",
+      "provider": "none",
+      "source": "https://huggingface.co/datasets/r0b0tlab/qwen3.8-max-glm5.2-kimi-k3-distillation",
+      "format": "dataset",
+      "modalities": ["text"],
+      "tags": ["dataset", "research", "evaluation"],
+      "purposes": ["research", "evaluation", "training"],
+      "local_only": true,
+      "experimental": true,
+      "routable": false,
+      "notes": "Research/evaluation dataset; never expose as an inference model."
+    }
+  ]
+}
