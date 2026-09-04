@@ -1,7 +1,8 @@
 'use client'
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
+import PentestConsole from './components/PentestConsole'
 
-const nav = ['Overview', 'Tasks', 'Agents', 'MCP Capabilities', 'Models', 'Memory', 'Security', 'Verification', 'Evidence', 'Settings']
+const nav = ['Overview', 'Tasks', 'Agents', 'MCP Capabilities', 'Models', 'Memory', 'Security', 'Pentest', 'Verification', 'Evidence', 'Settings']
 const pipeline = ['Plan', 'Security', 'Dispatch', 'Execute', 'Verify', 'Audit', 'Publish']
 type Agent = { id: number; hostname: string; os: string; ip: string; alive: boolean; tags: string[] }
 type Job = { id: number; hostname: string; cmd: string; status: string; created_at: string; completed_at: string | null; result: unknown }
@@ -73,6 +74,7 @@ export default function Home() {
       {active === 'Models' && <ModelsPanel />}
       {active === 'Memory' && <MemoryPanel />}
       {active === 'Security' && <SecurityPanel />}
+      {active === 'Pentest' && <PentestConsole />}
       {active === 'Verification' && <VerificationPanel jobs={data.jobs} />}
       {active === 'Evidence' && <EvidencePanel jobs={data.jobs} />}
       {active === 'Settings' && <SettingsPanel connected={data.connected} />}
