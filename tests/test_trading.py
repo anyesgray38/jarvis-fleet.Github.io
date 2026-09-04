@@ -14,7 +14,10 @@ class TradingTests(unittest.TestCase):
         signal = Signal("s1", "XAUUSD", "1m", Direction.LONG, 2000, 1990, 2030, 80)
         decision = engine.size(signal)
         self.assertTrue(decision.approved)
-        self.assertAlmostEqual(decision.risk_amount, 100.0)
+        # The 20% notional cap limits this trade to $2,000 / $2,000 = 1 unit,
+        # so realized risk is $10 rather than the uncapped $100 risk budget.
+        self.assertAlmostEqual(decision.quantity, 1.0)
+        self.assertAlmostEqual(decision.risk_amount, 10.0)
         bad = Signal("s2", "XAUUSD", "1m", Direction.LONG, 2000, 1990, 2010, 80)
         self.assertFalse(engine.size(bad).approved)
 
