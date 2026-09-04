@@ -15,13 +15,16 @@ from .models import (
     KnowledgeCandidate,
     ReproductionPlan,
 )
+from .orchestrator import DiscoveryOrchestrator, ExperimentDispatch
 from .stats import mean, permutation_p_value, summarize_samples
 
 __all__ = [
     "Anomaly",
     "DiscoveryEngine",
+    "DiscoveryOrchestrator",
     "Evidence",
     "Experiment",
+    "ExperimentDispatch",
     "ExperimentResult",
     "Hypothesis",
     "KnowledgeCandidate",
