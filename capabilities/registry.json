@@ -1,10 +1,11 @@
 {
-  "version": 6,
+  "version": 7,
   "purpose": "Domain-agnostic capability registry for AEGIS",
   "capabilities": [
     {"id":"core.task_orchestration","provider":"aegis","kind":"core","tags":["planning","orchestration"],"execution":"internal","verification":["contract","state_consistency"]},
     {"id":"core.web_research","provider":"aegis","kind":"core","tags":["research","web","evidence"],"execution":"agent","verification":["source_provenance","cross_check"]},
     {"id":"core.software_engineering","provider":"aegis","kind":"core","tags":["coding","repository","testing"],"execution":"agent","verification":["tests","diff_review","self_audit"]},
+    {"id":"core.self_upgrade","provider":"aegis","kind":"core","tags":["self-improvement","repository","testing","audit","governance"],"execution":"internal","verification":["scope_gate","tests","self_audit","human_approval","commit_provenance"]},
     {"id":"core.website_generation","provider":"aegis","kind":"core","tags":["website","frontend","coding","project"],"execution":"agent","verification":["filesystem_integrity","build_validation","browser_check","self_audit"]},
     {"id":"core.browser_automation","provider":"aegis","kind":"core","tags":["browser","automation","web"],"execution":"agent","verification":["task_state","visual_check"]},
     {"id":"core.memory","provider":"aegis","kind":"core","tags":["memory","retrieval","context"],"execution":"internal","verification":["provenance","retrieval_consistency"]},
