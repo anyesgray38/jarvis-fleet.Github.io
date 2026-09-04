@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "capabilities": [
+    {
+      "id": "security.web_assessment",
+      "kind": "security",
+      "description": "Governed, bounded HTTP(S) security assessment of explicitly authorized targets",
+      "execution": "internal",
+      "risk": "assessment",
+      "destructive": false,
+      "requires_authorization": true,
+      "requires_scope": true,
+      "default_dry_run": true,
+      "max_requests": 100,
+      "verification": ["evidence", "scope_check", "independent_verification", "self_audit"]
+    },
+    {
+      "id": "security.reconnaissance",
+      "kind": "security",
+      "description": "Bounded defensive reconnaissance within an explicitly authorized scope",
+      "execution": "internal",
+      "risk": "assessment",
+      "destructive": false,
+      "requires_authorization": true,
+      "requires_scope": true,
+      "default_dry_run": true,
+      "max_requests": 100,
+      "verification": ["evidence", "scope_check", "self_audit"]
+    },
+    {
+      "id": "security.finding_validation",
+      "kind": "security",
+      "description": "Independent validation and false-positive reduction for an existing security finding",
+      "execution": "internal",
+      "risk": "assessment",
+      "destructive": false,
+      "requires_authorization": true,
+      "requires_scope": true,
+      "default_dry_run": true,
+      "max_requests": 50,
+      "verification": ["independent_verification", "evidence", "self_audit"]
+    }
+  ],
+  "prohibited_actions": [
+    "exploit",
+    "bruteforce",
+    "credential_attack",
+    "persistence",
+    "evasion",
+    "payload_delivery",
+    "data_exfiltration",
+    "denial_of_service",
+    "destructive_change"
+  ]
+}
