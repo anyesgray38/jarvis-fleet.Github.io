@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "policy": "research-first",
+  "asset_classes": [
+    "equity", "etf", "forex", "metal", "energy", "crypto", "index",
+    "futures", "option", "fixed_income", "rate", "volatility", "commodity"
+  ],
+  "default_symbols": [
+    "XAUUSD", "XAGUSD", "EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD",
+    "USDCHF", "NZDUSD", "EURGBP", "EURCAD", "BTCUSD", "ETHUSD", "SOLUSD",
+    "SPX500", "NAS100", "US30", "USOIL", "NATGAS"
+  ],
+  "research_horizons": ["1m", "3m", "5m", "15m", "1h", "4h", "1d"],
+  "validation": [
+    "in_sample", "walk_forward", "out_of_sample", "permutation_test",
+    "monte_carlo", "independent_reproduction", "regime_analysis"
+  ],
+  "live_execution": false
+}
