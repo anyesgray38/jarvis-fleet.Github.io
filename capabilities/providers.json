@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "providers": [
     {
       "id": "localai",
@@ -8,6 +8,18 @@
       "transport": "openai_compatible_http",
       "default_base_url": "http://127.0.0.1:8080",
       "modalities": ["text", "vision", "audio", "image", "video"],
+      "policy": {
+        "local_preferred": true,
+        "external_data_required": false
+      }
+    },
+    {
+      "id": "lmstudio",
+      "kind": "model_inference",
+      "status": "supported",
+      "transport": "openai_compatible_http",
+      "default_base_url": "http://127.0.0.1:1234",
+      "modalities": ["text", "vision"],
       "policy": {
         "local_preferred": true,
         "external_data_required": false
