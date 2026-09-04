@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "mode": "paper",
+  "default_risk_fraction": 0.005,
+  "minimum_rr": 2.0,
+  "bots": [
+    {
+      "id": "xauusd-smc-1m",
+      "symbol": "XAUUSD",
+      "timeframe": "1m",
+      "strategy": "smc_confluence",
+      "enabled": true
+    },
+    {
+      "id": "xagusd-smc-3m",
+      "symbol": "XAGUSD",
+      "timeframe": "3m",
+      "strategy": "smc_confluence",
+      "enabled": true
+    },
+    {
+      "id": "btc-smc-3m",
+      "symbol": "BTCUSD",
+      "timeframe": "3m",
+      "strategy": "smc_confluence",
+      "enabled": true
+    }
+  ],
+  "live_execution": {
+    "enabled": false,
+    "requires": ["broker_admission", "security_policy", "risk_gate", "independent_verification", "human_approval"]
+  }
+}
