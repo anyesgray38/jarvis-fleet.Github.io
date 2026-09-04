@@ -7,9 +7,15 @@ from .bot import TradingBot, BotState
 from .fleet import TradingBotFleet
 from .backtest import BacktestReport, Backtester, TradeResult
 from .paper import PaperBroker
+from .universe import AssetClass, Instrument, MarketRegime, DEFAULT_UNIVERSE, find_instruments
+from .strategies import StrategySpec, STRATEGY_CATALOG, find_strategies
+from .research import ResearchTarget, TradingResearchPlanner
 
 __all__ = [
-    "BacktestReport", "Backtester", "BotState", "Candle", "Direction",
-    "OrderIntent", "PaperBroker", "Position", "RiskDecision", "RiskPolicy",
-    "SMCAnalyzer", "Signal", "TradeResult", "TradingBot", "TradingBotFleet",
+    "AssetClass", "BacktestReport", "Backtester", "BotState", "Candle",
+    "DEFAULT_UNIVERSE", "Direction", "Instrument", "MarketRegime",
+    "OrderIntent", "PaperBroker", "Position", "ResearchTarget", "RiskDecision",
+    "RiskPolicy", "SMCAnalyzer", "Signal", "StrategySpec", "STRATEGY_CATALOG",
+    "TradeResult", "TradingBot", "TradingBotFleet", "TradingResearchPlanner",
+    "find_instruments", "find_strategies",
 ]
