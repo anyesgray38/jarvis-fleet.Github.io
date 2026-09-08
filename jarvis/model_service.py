@@ -1,7 +1,8 @@
 """Governed AEGIS model runtime service.
 
 ModelFabric performs admission/routing. This service validates requests, normalizes
-provider responses, runs independent deterministic checks, and appends chained evidence.
+provider responses, loads only task-relevant Shark context, runs independent
+deterministic checks, and appends chained evidence.
 """
 from __future__ import annotations
 
@@ -15,6 +16,7 @@ from typing import Any
 
 from providers.model_fabric import ModelFabric
 from providers.routing_policy import RoutingRequest
+from jarvis.shark_context import apply_context
 from jarvis.verification import evidence_digest, verify_inference_response
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -23,9 +25,16 @@ PROVIDER_REGISTRY = ROOT / "capabilities" / "providers.json"
 EVIDENCE_DIR = ROOT / "evidence"
 EVIDENCE_FILE = EVIDENCE_DIR / "inference.jsonl"
 
+
 class ModelRuntime:
     def __init__(self, *, localai_url: str | None = None, lmstudio_url: str | None = None, timeout: float = 120.0):
-        self.fabric = ModelFabric.from_files(model_registry_path=MODEL_REGISTRY, provider_registry_path=PROVIDER_REGISTRY, localai_url=localai_url or os.getenv("AEGIS_LOCALAI_URL", "http://127.0.0.1:8080"), lmstudio_url=lmstudio_url or os.getenv("AEGIS_LMSTUDIO_URL", "http://127.0.0.1:1234"), timeout=timeout)
+        self.fabric = ModelFabric.from_files(
+            model_registry_path=MODEL_REGISTRY,
+            provider_registry_path=PROVIDER_REGISTRY,
+            localai_url=localai_url or os.getenv("AEGIS_LOCALAI_URL", "http://127.0.0.1:8080"),
+            lmstudio_url=lmstudio_url or os.getenv("AEGIS_LMSTUDIO_URL", "http://127.0.0.1:1234"),
+            timeout=timeout,
+        )
 
     def chat(self, *, messages: list[dict[str, str]], purpose: str = "general", required_tags: set[str] | None = None, modality: str = "text", preferred_provider: str | None = None, local_only: bool = True, allow_external: bool = False, metadata: dict[str, Any] | None = None, **kwargs: Any) -> dict[str, Any]:
         if not messages or not all(isinstance(m, dict) and isinstance(m.get("role"), str) and isinstance(m.get("content"), str) for m in messages):
@@ -36,11 +45,12 @@ class ModelRuntime:
         started = time.monotonic()
         request = RoutingRequest(required_tags=frozenset(required_tags or set()), modality=modality, preferred_provider=preferred_provider, local_only=local_only, allow_external=allow_external, purpose=purpose, metadata=metadata or {})
         route = self.fabric.resolve(request=request)
-        result = self.fabric.chat(route, messages=messages, **kwargs)
+        runtime_messages = apply_context(messages, purpose=purpose)
+        result = self.fabric.chat(route, messages=runtime_messages, **kwargs)
         elapsed_ms = round((time.monotonic() - started) * 1000, 2)
         normalized = self._normalize(result)
         verification = verify_inference_response(normalized)
-        evidence = {"schema": "aegis.inference.v2", "request_id": request_id, "timestamp": datetime.now(timezone.utc).isoformat(), "purpose": purpose, "route": {"provider": route.provider, "model": route.model, "reason": route.reason, "score": route.score, "constraints": route.constraints}, "timing_ms": elapsed_ms, "response": normalized, "verification": verification, "verified": verification["verified"]}
+        evidence = {"schema": "aegis.inference.v2", "request_id": request_id, "timestamp": datetime.now(timezone.utc).isoformat(), "purpose": purpose, "context_profile": purpose, "route": {"provider": route.provider, "model": route.model, "reason": route.reason, "score": route.score, "constraints": route.constraints}, "timing_ms": elapsed_ms, "response": normalized, "verification": verification, "verified": verification["verified"]}
         previous = self._last_digest()
         evidence["previous_digest"] = previous
         evidence["evidence_digest"] = evidence_digest(evidence, previous)
