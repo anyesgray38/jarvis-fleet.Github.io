@@ -1,0 +1,10 @@
+.git
+.github
+.next
+node_modules
+__pycache__
+*.pyc
+*.crt
+*.key
+.env
+.env.*
