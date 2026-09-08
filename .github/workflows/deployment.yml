@@ -1,0 +1,61 @@
+name: AEGIS deployment validation
+
+on:
+  pull_request:
+    paths:
+      - 'deploy/**'
+      - '.dockerignore'
+      - 'web/**'
+      - '*.py'
+      - 'jarvis/**'
+      - 'providers/**'
+      - 'config/**'
+  push:
+    branches: [master]
+    paths:
+      - 'deploy/**'
+      - '.dockerignore'
+      - 'web/**'
+      - '*.py'
+      - 'jarvis/**'
+      - 'providers/**'
+      - 'config/**'
+
+jobs:
+  compose-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Compose configuration
+        env:
+          AEGIS_FLEET_SECRET: ci-validation-secret
+          CLOUDFLARE_TUNNEL_TOKEN: ci-validation-token
+        run: docker compose -f deploy/compose.yml --profile public config
+
+  web-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package.json
+      - name: Install web dependencies
+        working-directory: web
+        run: npm install --no-audit --no-fund
+      - name: Build control center
+        working-directory: web
+        run: npm run build
+
+  python-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python test dependencies
+        run: python3 -m pip install --disable-pip-version-check pytest
+      - name: Run Python tests
+        run: python3 -m pytest -q
