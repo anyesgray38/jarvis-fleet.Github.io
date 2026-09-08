@@ -3,8 +3,9 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
 import PentestConsole from './components/PentestConsole'
 import AegisChat from './components/AegisChat'
 import PentestChat from './components/PentestChat'
+import HomelabDashboard from './components/HomelabDashboard'
 
-const nav = ['Overview', 'Chat', 'Tasks', 'Agents', 'MCP Capabilities', 'Models', 'Memory', 'Security', 'Pentest Chat', 'Pentest', 'Verification', 'Evidence', 'Settings']
+const nav = ['Homelab', 'Overview', 'Chat', 'Tasks', 'Agents', 'MCP Capabilities', 'Models', 'Memory', 'Security', 'Pentest Chat', 'Pentest', 'Verification', 'Evidence', 'Settings']
 const pipeline = ['Plan', 'Security', 'Dispatch', 'Execute', 'Verify', 'Audit', 'Publish']
 type Agent = { id: number; hostname: string; os: string; ip: string; alive: boolean; tags: string[] }
 type Job = { id: number; hostname: string; cmd: string; status: string; created_at: string; completed_at: string | null; result: unknown }
@@ -12,7 +13,7 @@ type State = { connected: boolean; upstreamConfigured: boolean; agents: Agent[];
 const initial: State = { connected: false, upstreamConfigured: false, agents: [], jobs: [], error: null, fetchedAt: '' }
 
 export default function Home() {
-  const [active, setActive] = useState('Overview')
+  const [active, setActive] = useState('Homelab')
   const [data, setData] = useState(initial)
   const [loading, setLoading] = useState(true)
   const [actionMessage, setActionMessage] = useState<string | null>(null)
@@ -23,6 +24,7 @@ export default function Home() {
   const recentJobs = useMemo(() => data.jobs.slice(-8).reverse(), [data.jobs])
   async function action(payload: Record<string, unknown>) { setActionMessage(null); try { const r = await fetch('/api/control-plane', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); const d = await r.json(); if (!r.ok || !d.ok) throw new Error(d.error || 'Action failed'); setActionMessage('Action accepted by orchestrator'); await refresh() } catch (e) { setActionMessage(e instanceof Error ? e.message : 'Action failed') } }
   return <div className="shell"><aside className="sidebar"><div className="brand">AEGIS<span>AUTONOMOUS INTELLIGENCE</span></div><nav className="nav">{nav.map(n => <button key={n} className={active === n ? 'active' : ''} onClick={() => { setActive(n); setActionMessage(null) }}>{n}</button>)}</nav><div className="footer">CONTROL PLANE v1.0<br />{data.connected ? 'UPSTREAM CONNECTED' : 'UPSTREAM OFFLINE'}</div></aside><main className="main"><header className="top"><div><div className="eyebrow">{active}</div><div className="title">AEGIS Control Center</div><div className="muted">Autonomous Execution, Governance & Intelligence System</div></div><div className="status"><i className={data.connected ? 'dot' : 'dot off'} />{data.connected ? 'Systems connected' : 'Demo / disconnected'}</div></header>{!data.connected && <div className="notice">{data.error || 'Set AEGIS_ORCHESTRATOR_URL on the server to connect this dashboard to the AEGIS orchestrator.'}</div>}{actionMessage && <div className={actionMessage.includes('accepted') ? 'notice success' : 'notice'}>{actionMessage}</div>}
+      {active === 'Homelab' && <HomelabDashboard />}
       {active === 'Overview' && <Overview data={data} activeJobs={activeJobs} liveAgents={liveAgents} recentJobs={recentJobs} loading={loading} />}
       {active === 'Chat' && <AegisChat />}
       {active === 'Tasks' && <Tasks agents={data.agents} jobs={data.jobs} onAction={action} />}
