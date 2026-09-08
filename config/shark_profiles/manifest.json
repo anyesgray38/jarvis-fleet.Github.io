@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "permanent": "config/shark_ai_core.md",
+  "profiles": {
+    "coding": "config/shark_profiles/coding.md",
+    "security": "config/shark_profiles/security.md",
+    "pentest": "config/shark_profiles/pentest.md",
+    "github": "config/shark_profiles/github.md"
+  },
+  "routing": {
+    "general": [],
+    "coding": ["coding", "github"],
+    "planning": ["coding"],
+    "security": ["security"],
+    "audit": ["security", "github"],
+    "verification": ["security"],
+    "pentest": ["security", "pentest"],
+    "research": ["coding"]
+  },
+  "policy": "Only load profiles required by the current task. Do not preload unrelated profiles."
+}
