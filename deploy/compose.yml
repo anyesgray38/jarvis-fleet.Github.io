@@ -1,0 +1,80 @@
+services:
+  orchestrator:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.python
+    command: >-
+      sh -c 'mkdir -p /run/aegis &&
+      if [ ! -s /run/aegis/server.crt ] || [ ! -s /run/aegis/server.key ]; then
+        openssl req -x509 -newkey rsa:2048 -nodes -days 3650
+        -keyout /run/aegis/server.key -out /run/aegis/server.crt
+        -subj "/CN=aegis-fleet";
+      fi &&
+      exec python3 orchestrator.py --secret "$AEGIS_FLEET_SECRET"
+      --port 4444 --api-port 8888 --cert /run/aegis/server.crt
+      --key /run/aegis/server.key --headless'
+    environment:
+      AEGIS_FLEET_SECRET: ${AEGIS_FLEET_SECRET:?Set AEGIS_FLEET_SECRET}
+    volumes:
+      - aegis-certs:/run/aegis
+    expose:
+      - "8888"
+      - "4444"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8888/health', timeout=2)"]
+      interval: 15s
+      timeout: 4s
+      retries: 5
+      start_period: 10s
+
+  model-runtime:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.python
+    command: ["python3", "aegis_chat_server.py"]
+    environment:
+      AEGIS_MODEL_BIND: 0.0.0.0
+      AEGIS_MODEL_PORT: 8891
+      AEGIS_LMSTUDIO_URL: ${AEGIS_LMSTUDIO_URL:-http://host.docker.internal:1234}
+      AEGIS_LOCALAI_URL: ${AEGIS_LOCALAI_URL:-http://host.docker.internal:8080}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - aegis-evidence:/app/evidence
+    expose:
+      - "8891"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8891/health', timeout=2)"]
+      interval: 15s
+      timeout: 4s
+      retries: 5
+      start_period: 10s
+
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.web
+    environment:
+      AEGIS_ORCHESTRATOR_URL: http://orchestrator:8888
+      AEGIS_MODEL_RUNTIME_URL: http://model-runtime:8891
+      NODE_ENV: production
+    depends_on:
+      orchestrator:
+        condition: service_healthy
+      model-runtime:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+volumes:
+  aegis-certs:
+  aegis-evidence:
