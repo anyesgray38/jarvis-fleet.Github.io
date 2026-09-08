@@ -3,6 +3,7 @@ services:
     build:
       context: ..
       dockerfile: deploy/Dockerfile.python
+    network_mode: host
     command: >-
       sh -c 'mkdir -p /run/aegis &&
       if [ ! -s /run/aegis/server.crt ] || [ ! -s /run/aegis/server.key ]; then
@@ -17,9 +18,6 @@ services:
       AEGIS_FLEET_SECRET: ${AEGIS_FLEET_SECRET:?Set AEGIS_FLEET_SECRET}
     volumes:
       - aegis-certs:/run/aegis
-    expose:
-      - "8888"
-      - "4444"
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8888/health', timeout=2)"]
@@ -32,18 +30,15 @@ services:
     build:
       context: ..
       dockerfile: deploy/Dockerfile.python
+    network_mode: host
     command: ["python3", "aegis_chat_server.py"]
     environment:
-      AEGIS_MODEL_BIND: 0.0.0.0
+      AEGIS_MODEL_BIND: 127.0.0.1
       AEGIS_MODEL_PORT: 8891
-      AEGIS_LMSTUDIO_URL: ${AEGIS_LMSTUDIO_URL:-http://host.docker.internal:1234}
-      AEGIS_LOCALAI_URL: ${AEGIS_LOCALAI_URL:-http://host.docker.internal:8080}
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      AEGIS_LMSTUDIO_URL: ${AEGIS_LMSTUDIO_URL:-http://127.0.0.1:1234}
+      AEGIS_LOCALAI_URL: ${AEGIS_LOCALAI_URL:-http://127.0.0.1:8080}
     volumes:
       - aegis-evidence:/app/evidence
-    expose:
-      - "8891"
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8891/health', timeout=2)"]
@@ -56,17 +51,18 @@ services:
     build:
       context: ..
       dockerfile: deploy/Dockerfile.web
+    network_mode: host
     environment:
-      AEGIS_ORCHESTRATOR_URL: http://orchestrator:8888
-      AEGIS_MODEL_RUNTIME_URL: http://model-runtime:8891
+      AEGIS_ORCHESTRATOR_URL: http://127.0.0.1:8888
+      AEGIS_MODEL_RUNTIME_URL: http://127.0.0.1:8891
       NODE_ENV: production
+      HOSTNAME: 127.0.0.1
     depends_on:
       orchestrator:
         condition: service_healthy
       model-runtime:
         condition: service_healthy
-    ports:
-      - "3000:3000"
+    command: ["npm", "run", "start", "--", "-H", "127.0.0.1", "-p", "3000"]
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
@@ -74,15 +70,6 @@ services:
       timeout: 5s
       retries: 5
       start_period: 20s
-
-  cloudflared:
-    image: cloudflare/cloudflared:latest
-    profiles: ["public"]
-    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN:?Set CLOUDFLARE_TUNNEL_TOKEN when using the public profile}
-    depends_on:
-      web:
-        condition: service_healthy
-    restart: unless-stopped
 
 volumes:
   aegis-certs:
