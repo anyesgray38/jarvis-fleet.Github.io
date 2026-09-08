@@ -75,6 +75,15 @@ services:
       retries: 5
       start_period: 20s
 
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    profiles: ["public"]
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN:?Set CLOUDFLARE_TUNNEL_TOKEN when using the public profile}
+    depends_on:
+      web:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   aegis-certs:
   aegis-evidence:
