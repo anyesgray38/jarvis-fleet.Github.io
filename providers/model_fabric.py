@@ -8,7 +8,6 @@ from typing import Any
 from .localai import LocalAIConfig, LocalAIProvider
 from .model_registry import ModelRegistry
 from .model_router import ModelRouter
-from .openai_compatible import OpenAICompatibleConfig, OpenAICompatibleProvider
 
 
 class ModelFabric:
@@ -26,7 +25,6 @@ class ModelFabric:
         model_registry_path: str | Path,
         provider_registry_path: str | Path,
         localai_url: str = "http://127.0.0.1:8080",
-        lmstudio_url: str = "http://127.0.0.1:1234",
         timeout: float = 120.0,
     ) -> "ModelFabric":
         registry = ModelRegistry.from_file(model_registry_path)
@@ -40,11 +38,6 @@ class ModelFabric:
             specs[provider_id] = spec
             if provider_id == "localai":
                 providers.append(LocalAIProvider(LocalAIConfig(base_url=localai_url, timeout=timeout)))
-            elif provider_id == "lmstudio":
-                providers.append(OpenAICompatibleProvider(
-                    provider_id="lmstudio",
-                    config=OpenAICompatibleConfig(base_url=lmstudio_url, timeout=timeout),
-                ))
         return cls(registry, providers, specs)
 
     def resolve(self, **kwargs: Any):
