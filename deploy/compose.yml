@@ -40,7 +40,6 @@ services:
     environment:
       AEGIS_MODEL_BIND: 127.0.0.1
       AEGIS_MODEL_PORT: 8891
-      AEGIS_LMSTUDIO_URL: ${AEGIS_LMSTUDIO_URL:-http://127.0.0.1:1234}
       AEGIS_LOCALAI_URL: ${AEGIS_LOCALAI_URL:-http://127.0.0.1:8080}
       PYTHONUNBUFFERED: "1"
     volumes:
