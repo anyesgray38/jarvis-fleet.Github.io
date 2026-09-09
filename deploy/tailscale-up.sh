@@ -16,8 +16,10 @@ if [[ ! -f deploy/.env ]]; then
   cp deploy/.env.example deploy/.env
 fi
 
-if ! grep -q '^AEGIS_FLEET_SECRET=' deploy/.env || grep -q '^AEGIS_FLEET_SECRET=$' deploy/.env; then
-  secret="$(openssl rand -hex 32)"
+# Never accept the checked-in template value as a real credential.
+if ! grep -q '^AEGIS_FLEET_SECRET=' deploy/.env \
+  || grep -Eq '^AEGIS_FLEET_SECRET=(|replace-with-a-long-random-secret)$' deploy/.env; then
+  secret="$(tr -dc 'A-Fa-f0-9' </dev/urandom | head -c 64)"
   if grep -q '^AEGIS_FLEET_SECRET=' deploy/.env; then
     sed -i "s/^AEGIS_FLEET_SECRET=.*/AEGIS_FLEET_SECRET=${secret}/" deploy/.env
   else
