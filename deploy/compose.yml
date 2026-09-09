@@ -7,9 +7,7 @@ services:
     command: >-
       sh -c 'mkdir -p /run/aegis &&
       if [ ! -s /run/aegis/server.crt ] || [ ! -s /run/aegis/server.key ]; then
-        openssl req -x509 -newkey rsa:2048 -nodes -days 3650
-        -keyout /run/aegis/server.key -out /run/aegis/server.crt
-        -subj "/CN=aegis-fleet";
+        openssl req -x509 -newkey rsa:2048 -nodes -days 3650 -keyout /run/aegis/server.key -out /run/aegis/server.crt -subj "/CN=aegis-fleet";
       fi &&
       exec python3 orchestrator.py --secret "$AEGIS_FLEET_SECRET"
       --port 4444 --api-port 8888 --cert /run/aegis/server.crt
@@ -31,6 +29,28 @@ services:
       retries: 5
       start_period: 10s
 
+  localai:
+    image: localai/localai:latest
+    network_mode: host
+    command: ["--address", "127.0.0.1:8080"]
+    environment:
+      DEBUG: "false"
+      MODELS_PATH: /models
+    volumes:
+      - localai-models:/models
+      - localai-data:/data
+    mem_limit: 1400m
+    cpus: 1.5
+    pids_limit: 128
+    init: true
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/v1/models"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
   model-runtime:
     build:
       context: ..
@@ -49,10 +69,13 @@ services:
     pids_limit: 128
     init: true
     restart: unless-stopped
+    depends_on:
+      localai:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8891/health', timeout=2)"]
       interval: 15s
-      timeout: 4s
+      timeout: 10s
       retries: 5
       start_period: 10s
 
@@ -88,3 +111,5 @@ services:
 volumes:
   aegis-certs:
   aegis-evidence:
+  localai-models:
+  localai-data:
