@@ -16,8 +16,13 @@ services:
       --key /run/aegis/server.key --headless'
     environment:
       AEGIS_FLEET_SECRET: ${AEGIS_FLEET_SECRET:?Set AEGIS_FLEET_SECRET}
+      PYTHONUNBUFFERED: "1"
     volumes:
       - aegis-certs:/run/aegis
+    mem_limit: 384m
+    cpus: 0.75
+    pids_limit: 128
+    init: true
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8888/health', timeout=2)"]
@@ -35,10 +40,14 @@ services:
     environment:
       AEGIS_MODEL_BIND: 127.0.0.1
       AEGIS_MODEL_PORT: 8891
-      AEGIS_LMSTUDIO_URL: ${AEGIS_LMSTUDIO_URL:-http://127.0.0.1:1234}
       AEGIS_LOCALAI_URL: ${AEGIS_LOCALAI_URL:-http://127.0.0.1:8080}
+      PYTHONUNBUFFERED: "1"
     volumes:
       - aegis-evidence:/app/evidence
+    mem_limit: 512m
+    cpus: 1.0
+    pids_limit: 128
+    init: true
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8891/health', timeout=2)"]
@@ -57,12 +66,17 @@ services:
       AEGIS_MODEL_RUNTIME_URL: http://127.0.0.1:8891
       NODE_ENV: production
       HOSTNAME: 127.0.0.1
+      NODE_OPTIONS: --max-old-space-size=512
     depends_on:
       orchestrator:
         condition: service_healthy
       model-runtime:
         condition: service_healthy
     command: ["npm", "run", "start", "--", "-H", "127.0.0.1", "-p", "3000"]
+    mem_limit: 768m
+    cpus: 1.0
+    pids_limit: 128
+    init: true
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
