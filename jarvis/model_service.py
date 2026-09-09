@@ -27,12 +27,11 @@ EVIDENCE_FILE = EVIDENCE_DIR / "inference.jsonl"
 
 
 class ModelRuntime:
-    def __init__(self, *, localai_url: str | None = None, lmstudio_url: str | None = None, timeout: float = 120.0):
+    def __init__(self, *, localai_url: str | None = None, timeout: float = 120.0):
         self.fabric = ModelFabric.from_files(
             model_registry_path=MODEL_REGISTRY,
             provider_registry_path=PROVIDER_REGISTRY,
             localai_url=localai_url or os.getenv("AEGIS_LOCALAI_URL", "http://127.0.0.1:8080"),
-            lmstudio_url=lmstudio_url or os.getenv("AEGIS_LMSTUDIO_URL", "http://127.0.0.1:1234"),
             timeout=timeout,
         )
 
