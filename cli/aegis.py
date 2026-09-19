@@ -142,8 +142,13 @@ def make_plan(client: AegisClient, objective: str) -> dict[str, Any]:
     if not isinstance(content, str) or not content.strip():
         raise AegisCLIError("planner returned no content")
     content = content.strip()
-    if content.startswith("FENCE"):
-        content = content.replace("FENCEjson", "", 1).replace("FENCE", "").strip()
+    fence = chr(96) * 3
+    if content.startswith(fence):
+        content = content[len(fence):].strip()
+        if content.startswith("json"):
+            content = content[4:].strip()
+        if content.endswith(fence):
+            content = content[:-len(fence)].strip()
     try:
         plan = json.loads(content)
     except json.JSONDecodeError as exc:
