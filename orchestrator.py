@@ -33,6 +33,8 @@ import struct
 import os
 import sys
 import argparse
+
+RAW_FLEET_ENABLED = os.environ.get("JARVIS_ALLOW_RAW_FLEET", "").lower() == "true"
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -393,6 +395,10 @@ class Orchestrator:
                 path = urlparse(self.path).path
                 body = self._body()
                 parts = path.strip('/').split('/')
+
+                # Raw fleet execution is disabled by default. Governed Dispatcher is the front door.
+                if not RAW_FLEET_ENABLED and ((len(parts) == 3 and parts[0] == 'agents' and parts[2] in {'shell','pine'}) or path in {'/broadcast','/parallel'}):
+                    return self._send(403, {'error': 'governance_required', 'message': 'raw fleet execution is disabled; route work through the Jarvis Dispatcher'})
 
                 # /agents/{id}/shell
                 if len(parts) == 3 and parts[0] == 'agents' and parts[2] == 'shell':

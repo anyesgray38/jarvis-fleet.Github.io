@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from typing import Any, Callable, Protocol
 
 from .audit import audit_result
+from .autonomy import ActivityFeed, AutonomyController, TaskStatus, TrustLevel
 from .capabilities import CapabilityRegistry
 from .workflow import WorkflowPlan, WorkflowRunResult, WorkflowRunner
 from security.policy import Policy, PolicyDenied
@@ -43,15 +44,25 @@ class Dispatcher:
         self.executor = executor
         self.checks = checks or {}
         self.evidence = evidence
+        self.activity = ActivityFeed()
+        self.autonomy = AutonomyController()
 
     def dispatch(self, task: dict[str, Any], *, security: dict[str, Any] | None = None) -> DispatchResult:
         task_id = str(task.get("task_id", ""))
+        if not task_id:
+            return DispatchResult("", TaskStatus.REJECTED, error="task_id is required")
+        required = TrustLevel(int(task.get("trust_required", TrustLevel.PREPARE)))
+        if not self.autonomy.can_execute(required, external=required >= TrustLevel.EXECUTE_EXTERNAL):
+            return DispatchResult(task_id, TaskStatus.REJECTED, error="trust level does not permit execution")
+        self.activity.emit("task.received", task_id, capability=task.get("capability"))
         try:
             capability = self.registry.get(str(task["capability"]))
             self.policy.authorize(str(task["capability"]), security=security)
             self._record("task.authorized", task, {"capability": capability["id"]})
+            self.activity.emit("task.authorized", task_id, capability=capability["id"])
             result = self.executor(task, capability)
             self._record("task.executed", task, {"result": result})
+            self.activity.emit("task.executed", task_id)
 
             verification = task.get("verification", {})
             if verification.get("required", True):
@@ -59,11 +70,13 @@ class Dispatcher:
                 audit = report.to_dict()
                 self._record("task.audited", task, {"audit": audit})
                 if not report.passed:
+                    self.activity.emit("task.rejected", task_id, reason="verification failed")
                     return DispatchResult(task_id, "rejected", result, audit, "verification failed")
             else:
                 audit = None
 
             self._record("task.published", task, {"status": "passed"})
+            self.activity.emit("task.passed", task_id)
             return DispatchResult(task_id, "passed", result, audit)
         except (KeyError, ValueError, PolicyDenied) as exc:
             self._record("task.rejected", task, {"error": str(exc)})
