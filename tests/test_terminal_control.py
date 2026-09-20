@@ -15,9 +15,9 @@ class TerminalControlTests(unittest.TestCase):
         self.assertEqual(control_for_capability("terminal.execute"), "terminal_execution")
         self.assertEqual(control_for_capability("terminal.write"), "terminal_execution")
 
-    def test_shell_action_is_registered_but_requires_safety_gate(self):
+    def test_shell_action_is_not_in_default_fabric(self):
         fabric = default_fabric()
-        self.assertIn("shell.execute", fabric.available())
+        self.assertNotIn("shell.execute", fabric.available())
 
     def test_exec_requires_terminal_safety_switch(self):
         with tempfile.TemporaryDirectory() as tmp:
