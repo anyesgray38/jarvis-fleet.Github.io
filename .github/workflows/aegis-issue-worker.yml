@@ -38,7 +38,7 @@ jobs:
               raise SystemExit("invalid job_id")
           if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", fields["repository"]):
               raise SystemExit("repository must be owner/name")
-          objective = re.search(r"^### Objective\\s*\\n(.*?)(?:\\n\\n|\\Z)", body, re.MULTILINE | re.DOTALL)
+          objective = re.search(r"^### Objective\s*\n(.*?)(?:\n\n|\Z)", body, re.MULTILINE | re.DOTALL)
           if not objective:
               raise SystemExit("missing objective")
           fields["objective"] = objective.group(1).strip()
@@ -68,11 +68,11 @@ jobs:
       - name: Run AEGIS project worker
         env:
           AEGIS_JOB_ID: ${{ steps.request.outputs.job_id }}
-          AEGIS_OBJECTIVE: ${{ github.event.issue.body }}
+          AEGIS_OBJECTIVE: ${{ steps.request.outputs.objective }}
           AEGIS_CAPABILITY: ${{ steps.request.outputs.capability }}
         run: |
           set -euo pipefail
-          python3 -m jarvis.remote_worker --project project --job-id "$AEGIS_JOB_ID" --capability "$AEGIS_CAPABILITY" --issue "$GITHUB_REPOSITORY#$${{ github.event.issue.number }}" --objective "$AEGIS_OBJECTIVE"
+          python3 -m jarvis.remote_worker --project project --job-id "$AEGIS_JOB_ID" --capability "$AEGIS_CAPABILITY" --issue "$GITHUB_REPOSITORY#${{ github.event.issue.number }}" --objective "$AEGIS_OBJECTIVE"
 
       - name: Report result
         if: always()
