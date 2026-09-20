@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 from pathlib import Path
 from typing import Sequence
 
@@ -11,6 +10,8 @@ from security.safety import SafetySettings
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="jarvis", description="Jarvis control-plane CLI")
+    parser.add_argument("--safety-config", default=".jarvis/safety.json",
+                        help="path to the persisted safety settings file")
     sub = parser.add_subparsers(dest="command")
 
     safety = sub.add_parser("safety", help="view and change runtime safety controls")
@@ -21,7 +22,6 @@ def build_parser() -> argparse.ArgumentParser:
     enable.add_argument("control")
     disable = safety_sub.add_parser("disable", help="disable a safety control")
     disable.add_argument("control")
-
     show = safety_sub.add_parser("show", help="show one safety control")
     show.add_argument("control")
     return parser
@@ -30,7 +30,7 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    settings = SafetySettings()
+    settings = SafetySettings(args.safety_config)
 
     if args.command != "safety":
         parser.print_help()
