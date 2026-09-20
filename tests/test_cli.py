@@ -14,6 +14,8 @@ class CliTests(unittest.TestCase):
             argv = [command] + (["x"] if command in {"ask", "inspect", "plan", "simulate"} else [])
             if command == "run":
                 argv += ["x", "--capability", "core.task_orchestration"]
+            elif command == "simulate":
+                argv += ["--capability", "core.task_orchestration"]
             args = parser.parse_args(argv)
             self.assertEqual(args.command, command)
 
