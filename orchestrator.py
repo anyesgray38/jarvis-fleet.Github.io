@@ -333,8 +333,7 @@ class Orchestrator:
 
         info = session.info
         print(
-            f'
-[+] Agent {aid} connected  '
+            f'\n[+] Agent {aid} connected  '
             f'{info.get("user","?")}@{info.get("hostname","?")}  '
             f'{addr[0]}  {info.get("os","?")}'
         )
@@ -396,6 +395,10 @@ class Orchestrator:
                 path = urlparse(self.path).path
                 body = self._body()
                 parts = path.strip('/').split('/')
+
+                # Raw fleet execution is disabled by default. Governed Dispatcher is the front door.
+                if not RAW_FLEET_ENABLED and ((len(parts) == 3 and parts[0] == 'agents' and parts[2] in {'shell','pine'}) or path in {'/broadcast','/parallel'}):
+                    return self._send(403, {'error': 'governance_required', 'message': 'raw fleet execution is disabled; route work through the Jarvis Dispatcher'})
 
                 # /agents/{id}/shell
                 if len(parts) == 3 and parts[0] == 'agents' and parts[2] == 'shell':
@@ -480,14 +483,12 @@ class Orchestrator:
     # ── Interactive CLI ───────────────────────────────────────────────────────
 
     def _cli(self):
-        print('Commands: list | use <id> | broadcast <cmd> | tag <id> <label> | exit
-')
+        print('Commands: list | use <id> | broadcast <cmd> | tag <id> <label> | exit\n')
         while True:
             try:
                 line = input('orchestrator> ').strip()
             except (EOFError, KeyboardInterrupt):
-                print('
-[*] Bye')
+                print('\n[*] Bye')
                 sys.exit(0)
 
             if not line:
@@ -533,8 +534,7 @@ class Orchestrator:
                 for item in results:
                     a = item['agent']
                     r = item['result']
-                    print(f'
-  [{a["id"]}] {a["ip"]}  {a["user"]}@{a["hostname"]}')
+                    print(f'\n  [{a["id"]}] {a["ip"]}  {a["user"]}@{a["hostname"]}')
                     if r.get('stdout'):
                         print(r['stdout'], end='')
                     if r.get('stderr'):
@@ -568,8 +568,7 @@ class Orchestrator:
 
     def _agent_repl(self, s: AgentSession):
         print(f'[*] Attached to agent {s.id} ({s.addr[0]})')
-        print('    shell <cmd> | upload <local> <remote> | download <remote> <local> | back
-')
+        print('    shell <cmd> | upload <local> <remote> | download <remote> <local> | back\n')
         while True:
             try:
                 line = input(f'agent[{s.id}]> ').strip()
