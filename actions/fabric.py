@@ -1,7 +1,7 @@
 """Small, auditable action fabric used by AEGIS agents.
 
-The fabric is deliberately allow-listed. It does not expose an unrestricted
-shell to models. Higher-risk actions must be explicitly registered by policy.
+The fabric is deliberately allow-listed. Higher-risk actions are admitted only
+through explicit safety controls and policy.
 """
 from __future__ import annotations
 
@@ -90,19 +90,31 @@ def filesystem_read(context: ActionContext, args: dict[str, Any]) -> dict[str, A
 
 
 def shell_execute(context: ActionContext, args: dict[str, Any]) -> dict[str, Any]:
-    """Execute a command only when the caller supplies an explicit allowlist.
+    """Execute a terminal command after the shell safety gate is admitted.
 
-    The action is intentionally not registered by default. A policy layer can
-    register a constrained wrapper for approved commands.
+    The command runs as the local user in the AEGIS workspace. The dispatcher
+    is responsible for policy and safety admission before this action is called.
     """
     command = args.get("command")
-    allowed = args.get("allowed_commands", [])
     if not isinstance(command, str) or not command.strip():
         raise ActionError("command is required")
-    if command.split()[0] not in allowed:
-        raise ActionError("command is not in the action allowlist")
-    proc = subprocess.run(command, shell=True, cwd=context.workspace, capture_output=True, text=True, timeout=120, env=os.environ.copy())
-    return {"returncode": proc.returncode, "stdout": proc.stdout[-20000:], "stderr": proc.stderr[-20000:]}
+    timeout = int(args.get("timeout", 120))
+    if timeout < 1 or timeout > 600:
+        raise ActionError("timeout must be between 1 and 600 seconds")
+    proc = subprocess.run(
+        command,
+        shell=True,
+        cwd=context.workspace,
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+        env=os.environ.copy(),
+    )
+    return {
+        "returncode": proc.returncode,
+        "stdout": proc.stdout[-20000:],
+        "stderr": proc.stderr[-20000:],
+    }
 
 
 def default_fabric() -> ActionFabric:

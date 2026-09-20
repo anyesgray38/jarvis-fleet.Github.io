@@ -4,14 +4,30 @@
     "require_security_scan": true,
     "block_incomplete_scan": true,
     "max_risk_score": 50,
-    "blocked_severities": ["HIGH", "CRITICAL"]
+    "blocked_severities": [
+      "HIGH",
+      "CRITICAL"
+    ]
   },
   "capabilities": {
     "core.self_upgrade": {
       "require_security_scan": true,
       "block_incomplete_scan": true,
       "max_risk_score": 20,
-      "blocked_severities": ["MEDIUM", "HIGH", "CRITICAL"]
+      "blocked_severities": [
+        "MEDIUM",
+        "HIGH",
+        "CRITICAL"
+      ]
+    },
+    "terminal.execute": {
+      "require_security_scan": false
+    },
+    "terminal.read": {
+      "require_security_scan": false
+    },
+    "terminal.write": {
+      "require_security_scan": false
     }
   }
 }

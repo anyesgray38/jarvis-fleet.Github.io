@@ -22,6 +22,7 @@ DEFAULTS = {
     "autonomous_execution": False,
     "secret_access": False,
     "git_write": False,
+    "terminal_execution": False,
 }
 
 
@@ -118,6 +119,8 @@ CAPABILITY_CONTROLS = {
     "network.request": "external_network",
     "network.fetch": "external_network",
     "system.delete": "destructive_actions",
+    "terminal.execute": "terminal_execution",
+    "terminal.write": "terminal_execution",
 }
 
 
