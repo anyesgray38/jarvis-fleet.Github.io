@@ -24,5 +24,11 @@ jobs:
           python-version: "3.13"
       - name: Compile Python
         run: python -m compileall -q .
+      - name: CLI smoke test
+        run: |
+          python -m jarvis help
+          python -m jarvis --json status
+          python -m jarvis --json capabilities
+          python -m jarvis --json simulate "CLI smoke test" --capability shell.execute --trust EXECUTE_LOCAL
       - name: Unit tests
         run: python -m unittest discover -s tests -p 'test_*.py' -v
