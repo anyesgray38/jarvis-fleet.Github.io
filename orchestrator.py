@@ -32,7 +32,9 @@ import json
 import struct
 import os
 import sys
-import argparse\n\nRAW_FLEET_ENABLED = os.environ.get("JARVIS_ALLOW_RAW_FLEET", "").lower() == "true"
+import argparse
+
+RAW_FLEET_ENABLED = os.environ.get("JARVIS_ALLOW_RAW_FLEET", "").lower() == "true"
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -331,7 +333,8 @@ class Orchestrator:
 
         info = session.info
         print(
-            f'\n[+] Agent {aid} connected  '
+            f'
+[+] Agent {aid} connected  '
             f'{info.get("user","?")}@{info.get("hostname","?")}  '
             f'{addr[0]}  {info.get("os","?")}'
         )
@@ -477,12 +480,14 @@ class Orchestrator:
     # ── Interactive CLI ───────────────────────────────────────────────────────
 
     def _cli(self):
-        print('Commands: list | use <id> | broadcast <cmd> | tag <id> <label> | exit\n')
+        print('Commands: list | use <id> | broadcast <cmd> | tag <id> <label> | exit
+')
         while True:
             try:
                 line = input('orchestrator> ').strip()
             except (EOFError, KeyboardInterrupt):
-                print('\n[*] Bye')
+                print('
+[*] Bye')
                 sys.exit(0)
 
             if not line:
@@ -528,7 +533,8 @@ class Orchestrator:
                 for item in results:
                     a = item['agent']
                     r = item['result']
-                    print(f'\n  [{a["id"]}] {a["ip"]}  {a["user"]}@{a["hostname"]}')
+                    print(f'
+  [{a["id"]}] {a["ip"]}  {a["user"]}@{a["hostname"]}')
                     if r.get('stdout'):
                         print(r['stdout'], end='')
                     if r.get('stderr'):
@@ -562,7 +568,8 @@ class Orchestrator:
 
     def _agent_repl(self, s: AgentSession):
         print(f'[*] Attached to agent {s.id} ({s.addr[0]})')
-        print('    shell <cmd> | upload <local> <remote> | download <remote> <local> | back\n')
+        print('    shell <cmd> | upload <local> <remote> | download <remote> <local> | back
+')
         while True:
             try:
                 line = input(f'agent[{s.id}]> ').strip()

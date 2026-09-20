@@ -4,7 +4,9 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any\n\nfrom jarvis.verification import evidence_digest
+from typing import Any
+
+from jarvis.verification import evidence_digest
 
 
 class EvidenceStore:
@@ -16,5 +18,6 @@ class EvidenceStore:
         record = dict(event)
         record.setdefault("timestamp", datetime.now(timezone.utc).isoformat())
         with self.path.open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps(record, sort_keys=True) + "\n")
+            handle.write(json.dumps(record, sort_keys=True) + "
+")
         return record
