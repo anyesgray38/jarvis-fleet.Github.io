@@ -11,7 +11,10 @@ class CliTests(unittest.TestCase):
     def test_parser_exposes_control_plane_commands(self):
         parser = build_parser()
         for command in ("status", "ask", "run", "plan", "simulate", "inspect", "safety", "toggle", "capabilities", "agents", "providers", "logs", "memory", "doctor"):
-            args = parser.parse_args([command] + (["x"] if command in {"ask", "inspect", "plan", "simulate"} else []))
+            argv = [command] + (["x"] if command in {"ask", "inspect", "plan", "simulate"} else [])
+            if command == "run":
+                argv += ["--capability", "core.task_orchestration"]
+            args = parser.parse_args(argv)
             self.assertEqual(args.command, command)
 
     def test_help_contains_aegis_banner(self):
