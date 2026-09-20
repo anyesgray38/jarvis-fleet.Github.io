@@ -1,0 +1,95 @@
+name: AEGIS Remote Worker
+
+on:
+  workflow_dispatch:
+    inputs:
+      objective:
+        description: "Project objective"
+        required: true
+        type: string
+      repository:
+        description: "Repository to operate on (owner/name)"
+        required: true
+        type: string
+      ref:
+        description: "Git ref to work from"
+        required: true
+        default: "master"
+        type: string
+      command:
+        description: "Bounded command to execute in the checked-out project"
+        required: true
+        type: string
+      job_id:
+        description: "AEGIS job identifier"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: aegis-remote-\${{ inputs.repository }}-\${{ inputs.job_id || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  worker:
+    name: AEGIS project worker
+    runs-on: [self-hosted, linux, aegis-worker]
+    timeout-minutes: 120
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v4
+        with:
+          repository: \${{ inputs.repository }}
+          ref: \${{ inputs.ref }}
+          fetch-depth: 0
+
+      - name: Identify worker
+        run: |
+          echo "AEGIS_JOB_ID=\${{ inputs.job_id || github.run_id }}" >> "$GITHUB_ENV"
+          echo "AEGIS_WORKER=$(hostname)" >> "$GITHUB_ENV"
+
+      - name: Run governed project task
+        env:
+          AEGIS_OBJECTIVE: \${{ inputs.objective }}
+          AEGIS_COMMAND: \${{ inputs.command }}
+        run: |
+          set -euo pipefail
+          printf '%s\n' "AEGIS OBJECTIVE: $AEGIS_OBJECTIVE"
+          printf '%s\n' "AEGIS WORKER: $AEGIS_WORKER"
+          printf '%s\n' "AEGIS JOB: $AEGIS_JOB_ID"
+          printf '%s\n' "AEGIS COMMAND: $AEGIS_COMMAND"
+          bash -lc "$AEGIS_COMMAND"
+
+      - name: Run repository verification
+        if: \${{ success() }}
+        run: |
+          set -euo pipefail
+          if [ -f pyproject.toml ] || [ -d tests ]; then
+            python3 -m compileall -q .
+            python3 -m unittest discover -s tests -p 'test_*.py' -v
+          else
+            echo "No Python test suite detected; repository-specific verification is required."
+          fi
+
+      - name: Publish worker summary
+        if: always()
+        run: |
+          {
+            echo "## AEGIS Remote Worker"
+            echo
+            echo "Job: \${{ inputs.job_id || github.run_id }}"
+            echo
+            echo "Objective: \${{ inputs.objective }}"
+            echo
+            echo "Repository: \${{ inputs.repository }}"
+            echo
+            echo "Ref: \${{ inputs.ref }}"
+            echo
+            echo "Worker: $AEGIS_WORKER"
+            echo
+            echo "Result: \${{ job.status }}"
+          } >> "$GITHUB_STEP_SUMMARY"
