@@ -124,5 +124,4 @@ def default_fabric() -> ActionFabric:
     fabric.register("filesystem.read", filesystem_read)
     fabric.register("filesystem.write", filesystem_write)
     fabric.register("website.create", website_create)
-    fabric.register("shell.execute", shell_execute)
     return fabric
