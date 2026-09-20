@@ -81,6 +81,13 @@ class JobStore:
         self.event(job_id, "job.queued", {"objective": objective, "repository": repository})
         return self.get(job_id)
 
+    def attach_remote(self, job_id: str, *, issue_number: int, issue_url: str | None = None) -> RemoteJob:
+        job = self.get(job_id)
+        payload = {"issue_number": issue_number}
+        if issue_url: payload["issue_url"] = issue_url
+        self.event(job_id, "job.remote_submitted", payload)
+        return job
+
     def get(self, job_id: str) -> RemoteJob:
         with self._connect() as db:
             row = db.execute("SELECT * FROM jobs WHERE job_id=?", (job_id,)).fetchone()
