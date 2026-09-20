@@ -143,11 +143,11 @@ def execute(args):
         command=" ".join(args.command_text).strip()
         if not command: raise ValueError("command is required")
         args.objective=f"Execute operator-authorized Linux command: {command}"
-        args.capability="terminal.execute";args.trust="EXECUTE_LOCAL";args.input=json.dumps({"command":command});args.execute=True;args.security_json=None
+        args.capability="terminal.execute";args.trust="PREPARE";args.input=json.dumps({"command":command});args.execute=True;args.security_json=None
         return _run(args)
     if args.command=="write":
         args.objective=f"Write operator-authorized file: {args.path}"
-        args.capability="terminal.write";args.trust="EXECUTE_LOCAL";args.input=json.dumps({"path":args.path,"content":args.content});args.execute=True;args.security_json=None
+        args.capability="terminal.write";args.trust="PREPARE";args.input=json.dumps({"path":args.path,"content":args.content});args.execute=True;args.security_json=None
         return _run(args)
     if args.command=="doctor":return _emit(args,_doctor(args))
     if args.command=="ask":
