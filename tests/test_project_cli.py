@@ -9,7 +9,7 @@ class ProjectCliTests(unittest.TestCase):
             db = Path(tmp) / "jobs.db"
             args = build_parser().parse_args([
                 "project", "start", "Improve timeframe correlation",
-                "--repository", "owner/repo", "--db", str(db)
+                "--repository", "owner/repo", "--db", str(db), "--no-dispatch"
             ])
             self.assertEqual(args.command, "project")
             self.assertEqual(args.project_command, "start")
