@@ -116,7 +116,12 @@ def _run(args):
     def executor(t,cap):
         action=str(cap.get("action",cap["id"]))
         return fabric.execute(action,t.get("input",{}),ActionContext(t["task_id"],workspace)).output
-    checks={\n        "evidence": lambda _t, result: (isinstance(result, dict), "result captured"),\n        "scope_check": lambda _t, _result: (workspace == Path.cwd().resolve(), "execution workspace is current directory"),\n        "result_audit": lambda _t, result: (isinstance(result.get("returncode"), int), "command returned a process status"),\n    }\n    result=Dispatcher(registry,Policy(DEFAULT_POLICY),executor,checks=checks,safety=_settings(args)).dispatch(task,security=security)
+    checks={
+        "evidence": lambda _t, result: (isinstance(result, dict), "result captured"),
+        "scope_check": lambda _t, _result: (workspace == Path.cwd().resolve(), "execution workspace is current directory"),
+        "result_audit": lambda _t, result: (isinstance(result.get("returncode"), int), "command returned a process status"),
+    }
+    result=Dispatcher(registry,Policy(DEFAULT_POLICY),executor,checks=checks,safety=_settings(args)).dispatch(task,security=security)
     return _emit(args,result.__dict__)
 def execute(args):
     if args.command in {None,"help"}:print(BANNER);build_parser().print_help();return 0
