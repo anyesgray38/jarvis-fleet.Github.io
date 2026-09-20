@@ -6,6 +6,7 @@ from typing import Any, Sequence
 
 from jarvis.autonomy import AutonomyController, TaskEnvelope, TrustLevel, simulate
 from jarvis.capabilities import CapabilityRegistry
+from jarvis.remote_jobs import JobStore, STATUSES
 from security.safety import SafetySettings
 
 ROOT=Path(__file__).resolve().parents[1]
@@ -52,6 +53,12 @@ def build_parser()->argparse.ArgumentParser:
     sim=sub.add_parser("simulate",help="dry-run a task");sim.add_argument("objective");sim.add_argument("--capability",required=True);sim.add_argument("--trust",default="PREPARE")
     safety=sub.add_parser("safety",help="manage runtime safety controls");ss=safety.add_subparsers(dest="safety_command");ss.add_parser("list");en=ss.add_parser("enable");en.add_argument("control");dis=ss.add_parser("disable");dis.add_argument("control");sh=ss.add_parser("show");sh.add_argument("control")
     tog=sub.add_parser("toggle",help="short form for a safety switch");tog.add_argument("control",choices=SafetySettings().controls);tog.add_argument("state",choices=("on","off"))
+    project=sub.add_parser("project",help="manage durable remote project jobs")
+    ps=project.add_subparsers(dest="project_command")
+    start=ps.add_parser("start",help="queue a project objective for a remote worker");start.add_argument("objective");start.add_argument("--repository",default=os.getenv("AEGIS_PROJECT_REPOSITORY","anyesgray38/jarvis-fleet.Github.io"));start.add_argument("--ref",default="master");start.add_argument("--capability",default="terminal.execute");start.add_argument("--trust",default="PREPARE");start.add_argument("--input",default="{}");start.add_argument("--db",default=os.getenv("JARVIS_JOB_DB",".jarvis/jobs.db"))
+    st=ps.add_parser("status",help="show a project job or queued jobs");st.add_argument("job_id",nargs="?");st.add_argument("--status",choices=STATUSES);st.add_argument("--db",default=os.getenv("JARVIS_JOB_DB",".jarvis/jobs.db"))
+    lg=ps.add_parser("logs",help="show project job events");lg.add_argument("job_id");lg.add_argument("--limit",type=int,default=100);lg.add_argument("--db",default=os.getenv("JARVIS_JOB_DB",".jarvis/jobs.db"))
+    ca=ps.add_parser("cancel",help="cancel a queued or running project job");ca.add_argument("job_id");ca.add_argument("--db",default=os.getenv("JARVIS_JOB_DB",".jarvis/jobs.db"))
     return p
 
 def _emit(args,payload,text=None):
@@ -123,9 +130,28 @@ def _run(args):
     }
     result=Dispatcher(registry,Policy(DEFAULT_POLICY),executor,checks=checks,safety=_settings(args)).dispatch(task,security=security)
     return _emit(args,result.__dict__)
+def _project(args):
+    store=JobStore(args.db)
+    if args.project_command=="start":
+        job=store.create(args.objective,args.repository,ref=args.ref,capability=args.capability,
+                         trust=args.trust,input=_input(args.input))
+        return _emit(args,job.__dict__,text=f"QUEUED\\nJob: {job.job_id}\\nRepository: {job.repository}\\nObjective: {job.objective}")
+    if args.project_command=="status":
+        if args.job_id:return _emit(args,store.get(args.job_id).__dict__)
+        return _emit(args,[j.__dict__ for j in store.list(args.status)])
+    if args.project_command=="logs":
+        return _emit(args,store.events(args.job_id,args.limit))
+    if args.project_command=="cancel":
+        job=store.get(args.job_id)
+        if job.status in {"passed","failed","rejected","escalated","cancelled"}:
+            raise ValueError(f"job {job.job_id} is already terminal: {job.status}")
+        return _emit(args,store.transition(job.job_id,"cancelled",data={"reason":"operator requested cancellation"}).__dict__)
+    raise ValueError("project command is required")
+
 def execute(args):
     if args.command in {None,"help"}:print(BANNER);build_parser().print_help();return 0
     if args.command=="status":return _emit(args,_status(args))
+    if args.command=="project":return _project(args)
     if args.command=="safety":return _safety(args)
     if args.command=="toggle":args.safety_command="enable" if args.state=="on" else "disable";return _safety(args)
     if args.command=="capabilities":return _emit(args,_caps(args))
