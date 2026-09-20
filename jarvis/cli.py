@@ -132,9 +132,23 @@ def execute(args):
     if args.command=="agents":return _emit(args,_fleet(args))
     if args.command=="providers":return _emit(args,_providers())
     if args.command=="logs":return _emit(args,_tail_evidence())
-    if args.command=="audit":\n        import compileall\n        target=Path(args.target).expanduser().resolve()\n        ok=compileall.compile_dir(str(target),quiet=1) if target.is_dir() else compileall.compile_file(str(target),quiet=1)\n        return _emit(args,{"target":str(target),"syntax_ok":bool(ok),"mode":"compile_only"})
+    if args.command=="audit":
+        import compileall
+        target=Path(args.target).expanduser().resolve()
+        ok=compileall.compile_dir(str(target),quiet=1) if target.is_dir() else compileall.compile_file(str(target),quiet=1)
+        return _emit(args,{"target":str(target),"syntax_ok":bool(ok),"mode":"compile_only"})
     if args.command=="memory":return _emit(args,_memory())
-    if args.command=="inspect":return _emit(args,_inspect(args.target))\n    if args.command=="exec":\n        command=" ".join(args.command_text).strip()\n        if not command: raise ValueError("command is required")\n        args.objective=f"Execute operator-authorized Linux command: {command}"\n        args.capability="terminal.execute";args.trust="EXECUTE_LOCAL";args.input=json.dumps({"command":command});args.execute=True;args.security_json=None\n        return _run(args)\n    if args.command=="write":\n        args.objective=f"Write operator-authorized file: {args.path}"\n        args.capability="terminal.write";args.trust="EXECUTE_LOCAL";args.input=json.dumps({"path":args.path,"content":args.content});args.execute=True;args.security_json=None\n        return _run(args)
+    if args.command=="inspect":return _emit(args,_inspect(args.target))
+    if args.command=="exec":
+        command=" ".join(args.command_text).strip()
+        if not command: raise ValueError("command is required")
+        args.objective=f"Execute operator-authorized Linux command: {command}"
+        args.capability="terminal.execute";args.trust="EXECUTE_LOCAL";args.input=json.dumps({"command":command});args.execute=True;args.security_json=None
+        return _run(args)
+    if args.command=="write":
+        args.objective=f"Write operator-authorized file: {args.path}"
+        args.capability="terminal.write";args.trust="EXECUTE_LOCAL";args.input=json.dumps({"path":args.path,"content":args.content});args.execute=True;args.security_json=None
+        return _run(args)
     if args.command=="doctor":return _emit(args,_doctor(args))
     if args.command=="ask":
         result=_chat(args.query,args.purpose,args.external);return _emit(args,result,text=result["response"]["content"])
