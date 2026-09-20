@@ -3,7 +3,6 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from jarvis.autonomy import TrustLevel
 from jarvis.cli import main
 from security.safety import SafetySettings, SafetyController, control_for_capability
 
@@ -17,11 +16,11 @@ class SafetyTests(unittest.TestCase):
             settings.set("shell_execution", True)
             loaded = SafetySettings(path)
             self.assertTrue(loaded.enabled("shell_execution"))
-            self.assertEqual(json.loads(path.read_text())["shell_execution"], True)
+            self.assertTrue(json.loads(path.read_text())["shell_execution"])
 
     def test_capability_maps_to_control(self):
         self.assertEqual(control_for_capability("shell.execute"), "shell_execution")
-        self.assertEqual(control_for_capability("filesystem.write"), None)
+        self.assertIsNone(control_for_capability("filesystem.write"))
 
     def test_disabled_control_blocks_and_enabled_allows(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -34,11 +33,10 @@ class SafetyTests(unittest.TestCase):
     def test_cli_toggle_changes_persisted_behavior(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "safety.json"
-            # CLI currently uses the default location; exercise the same command
-            # surface through its parser separately in the lower-level tests.
-            settings = SafetySettings(path)
-            settings.set("production_deploy", True)
-            self.assertTrue(SafetySettings(path).enabled("production_deploy"))
+            self.assertEqual(main(["--safety-config", str(path), "safety", "enable", "shell_execution"]), 0)
+            self.assertTrue(SafetySettings(path).enabled("shell_execution"))
+            self.assertEqual(main(["--safety-config", str(path), "safety", "disable", "shell_execution"]), 0)
+            self.assertFalse(SafetySettings(path).enabled("shell_execution"))
 
 
 if __name__ == "__main__":
