@@ -7,6 +7,7 @@ from typing import Any, Sequence
 from jarvis.autonomy import AutonomyController, TaskEnvelope, TrustLevel, simulate
 from jarvis.capabilities import CapabilityRegistry
 from jarvis.remote_jobs import JobStore, STATUSES
+from jarvis.remote_dispatch import submit_issue, RemoteDispatchError
 from security.safety import SafetySettings
 
 ROOT=Path(__file__).resolve().parents[1]
@@ -55,7 +56,7 @@ def build_parser()->argparse.ArgumentParser:
     tog=sub.add_parser("toggle",help="short form for a safety switch");tog.add_argument("control",choices=SafetySettings().controls);tog.add_argument("state",choices=("on","off"))
     project=sub.add_parser("project",help="manage durable remote project jobs")
     ps=project.add_subparsers(dest="project_command")
-    start=ps.add_parser("start",help="queue a project objective for a remote worker");start.add_argument("objective");start.add_argument("--repository",default=os.getenv("AEGIS_PROJECT_REPOSITORY","anyesgray38/jarvis-fleet.Github.io"));start.add_argument("--ref",default="master");start.add_argument("--capability",default="terminal.execute");start.add_argument("--trust",default="PREPARE");start.add_argument("--input",default="{}");start.add_argument("--db",default=os.getenv("JARVIS_JOB_DB",".jarvis/jobs.db"))
+    start=ps.add_parser("start",help="queue and remotely dispatch a project objective");start.add_argument("objective");start.add_argument("--repository",default=os.getenv("AEGIS_PROJECT_REPOSITORY","anyesgray38/jarvis-fleet.Github.io"));start.add_argument("--ref",default="master");start.add_argument("--capability",default="terminal.execute");start.add_argument("--trust",default="PREPARE");start.add_argument("--input",default="{}");start.add_argument("--db",default=os.getenv("JARVIS_JOB_DB",".jarvis/jobs.db"));start.add_argument("--no-dispatch",action="store_true",help="queue locally without creating a GitHub job")
     st=ps.add_parser("status",help="show a project job or queued jobs");st.add_argument("job_id",nargs="?");st.add_argument("--status",choices=STATUSES);st.add_argument("--db",default=os.getenv("JARVIS_JOB_DB",".jarvis/jobs.db"))
     lg=ps.add_parser("logs",help="show project job events");lg.add_argument("job_id");lg.add_argument("--limit",type=int,default=100);lg.add_argument("--db",default=os.getenv("JARVIS_JOB_DB",".jarvis/jobs.db"))
     ca=ps.add_parser("cancel",help="cancel a queued or running project job");ca.add_argument("job_id");ca.add_argument("--db",default=os.getenv("JARVIS_JOB_DB",".jarvis/jobs.db"))
@@ -135,7 +136,19 @@ def _project(args):
     if args.project_command=="start":
         job=store.create(args.objective,args.repository,ref=args.ref,capability=args.capability,
                          trust=args.trust,input=_input(args.input))
-        return _emit(args,job.__dict__,text=f"QUEUED\\nJob: {job.job_id}\\nRepository: {job.repository}\\nObjective: {job.objective}")
+        remote=None
+        if not args.no_dispatch:
+            try:
+                remote=submit_issue(repository=job.repository,objective=job.objective,ref=job.ref,
+                                     capability=job.capability,job_id=job.job_id)
+                issue_number=int(remote["url"].rstrip("/").split("/")[-1])
+                store.attach_remote(job.job_id,issue_number=issue_number,issue_url=remote["url"])
+            except (RemoteDispatchError, ValueError) as exc:
+                store.transition(job.job_id,"escalated",error=str(exc),data={"stage":"remote_dispatch"})
+                raise
+        payload=store.get(job.job_id).__dict__
+        if remote: payload["remote"]=remote
+        return _emit(args,payload,text=f"QUEUED\\nJob: {job.job_id}\\nRepository: {job.repository}\\nObjective: {job.objective}")
     if args.project_command=="status":
         if args.job_id:return _emit(args,store.get(args.job_id).__dict__)
         return _emit(args,[j.__dict__ for j in store.list(args.status)])
