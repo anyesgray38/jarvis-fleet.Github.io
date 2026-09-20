@@ -16,6 +16,8 @@ class CliTests(unittest.TestCase):
                 argv += ["x", "--capability", "core.task_orchestration"]
             elif command == "simulate":
                 argv += ["--capability", "core.task_orchestration"]
+            elif command == "toggle":
+                argv += ["shell_execution", "on"]
             args = parser.parse_args(argv)
             self.assertEqual(args.command, command)
 
