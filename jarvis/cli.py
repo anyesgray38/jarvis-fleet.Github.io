@@ -111,8 +111,8 @@ def _run(args):
     if not isinstance(security,dict):raise ValueError("--security-json must contain a JSON object")
     from jarvis.dispatcher import Dispatcher
     from security.policy import Policy
-    from actions.fabric import default_fabric,ActionContext
-    registry=CapabilityRegistry(args.capabilities);fabric=default_fabric();workspace=Path.cwd().resolve()
+    from actions.fabric import default_fabric,ActionContext,shell_execute
+    registry=CapabilityRegistry(args.capabilities);fabric=default_fabric();fabric.register("shell.execute", shell_execute);workspace=Path.cwd().resolve()
     def executor(t,cap):
         action=str(cap.get("action",cap["id"]))
         return fabric.execute(action,t.get("input",{}),ActionContext(t["task_id"],workspace)).output
