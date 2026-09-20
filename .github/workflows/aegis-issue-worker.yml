@@ -1,0 +1,83 @@
+name: AEGIS Issue Worker
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  worker:
+    if: startsWith(github.event.issue.title, '[AEGIS JOB]') && github.event.issue.user.login == github.repository_owner
+    runs-on: [self-hosted, linux, aegis-worker]
+    timeout-minutes: 120
+    steps:
+      - name: Parse job request
+        id: request
+        env:
+          BODY: \${{ github.event.issue.body }}
+        run: |
+          python3 - <<'PY'
+          import os, re
+          body = os.environ.get("BODY", "")
+          fields = {}
+          for key in ("repository", "ref", "command"):
+              match = re.search(r"^" + re.escape(key) + r":\s*(.+)$", body, re.MULTILINE)
+              if not match:
+                  raise SystemExit(f"missing required field: {key}")
+              fields[key] = match.group(1).strip()
+          if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", fields["repository"]):
+              raise SystemExit("repository must be owner/name")
+          for key, value in fields.items():
+              with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
+                  out.write(f"{key}<<EOF\n{value}\nEOF\n")
+          PY
+
+      - name: Report start
+        env:
+          GH_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+          ISSUE: \${{ github.event.issue.number }}
+          REPO: \${{ github.repository }}
+          WORKER: \${{ runner.name }}
+        run: |
+          gh issue comment "$ISSUE" --repo "$REPO" --body "AEGIS started job on worker $WORKER. Repository: \${{ steps.request.outputs.repository }}. Ref: \${{ steps.request.outputs.ref }}."
+
+      - name: Checkout target project
+        uses: actions/checkout@v4
+        with:
+          repository: \${{ steps.request.outputs.repository }}
+          ref: \${{ steps.request.outputs.ref }}
+          fetch-depth: 0
+          token: \${{ secrets.AEGIS_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Execute governed project task
+        env:
+          AEGIS_COMMAND: \${{ steps.request.outputs.command }}
+        run: |
+          set -euo pipefail
+          printf 'AEGIS COMMAND: %s\n' "$AEGIS_COMMAND"
+          bash -lc "$AEGIS_COMMAND"
+
+      - name: Verify project
+        if: \${{ success() }}
+        run: |
+          set -euo pipefail
+          python3 -m compileall -q . 2>/dev/null || true
+          if [ -d tests ]; then
+            python3 -m unittest discover -s tests -p 'test_*.py' -v
+          else
+            echo "No tests directory detected."
+          fi
+
+      - name: Report result
+        if: always()
+        env:
+          GH_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+          ISSUE: \${{ github.event.issue.number }}
+          REPO: \${{ github.repository }}
+          STATUS: \${{ job.status }}
+        run: |
+          gh issue comment "$ISSUE" --repo "$REPO" --body "AEGIS job result: **$STATUS**. Worker: \${{ runner.name }}. See the Actions run for full execution and verification logs."
