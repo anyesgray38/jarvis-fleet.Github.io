@@ -105,7 +105,7 @@ def _providers():
 def _memory():
     return {"layers":["personal","project","procedural","knowledge","evidence"],"storage":"control-plane memory interface","status":"ready"}
 def _run(args):
-    e=_envelope(args);task={"task_id":e.task_id,"objective":e.objective,"capability":e.capability,"trust_required":int(e.trust_required),"input":e.input}
+    e=_envelope(args);task={"task_id":e.task_id,"objective":e.objective,"capability":e.capability,"trust_required":int(e.trust_required),"input":e.input,"verification":getattr(args,"verification",{})}
     if not args.execute:return _emit(args,task,text=f"DRY RUN\nTask: {e.task_id}\nCapability: {e.capability}\nUse --execute to dispatch through AEGIS.")
     security=_load_json(Path(args.security_json)) if args.security_json else {"execution_successful":True,"risk_score":0,"severity":"LOW","approved":True}
     if not isinstance(security,dict):raise ValueError("--security-json must contain a JSON object")
