@@ -1,9 +1,4 @@
-"""Domain-agnostic AEGIS task and workflow lifecycle coordinator.
-
-The dispatcher depends on protocols/callables rather than the fleet
-implementation. This keeps cognition and policy separate from low-level
-execution while giving workflows a governed path into the same lifecycle.
-"""
+"""Domain-agnostic AEGIS task and workflow lifecycle coordinator."""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -14,6 +9,7 @@ from .autonomy import ActivityFeed, AutonomyController, TaskStatus, TrustLevel
 from .capabilities import CapabilityRegistry
 from .workflow import WorkflowPlan, WorkflowRunResult, WorkflowRunner
 from security.policy import Policy, PolicyDenied
+from security.safety import SafetyController, SafetySettings, control_for_capability
 
 
 class Executor(Protocol):
@@ -38,6 +34,7 @@ class Dispatcher:
         *,
         checks: dict[str, Callable[[dict[str, Any], dict[str, Any]], tuple[bool, str]]] | None = None,
         evidence: Any | None = None,
+        safety: SafetySettings | None = None,
     ):
         self.registry = registry
         self.policy = policy
@@ -46,6 +43,7 @@ class Dispatcher:
         self.evidence = evidence
         self.activity = ActivityFeed()
         self.autonomy = AutonomyController()
+        self.safety = SafetyController(safety)
 
     def dispatch(self, task: dict[str, Any], *, security: dict[str, Any] | None = None) -> DispatchResult:
         task_id = str(task.get("task_id", ""))
@@ -56,10 +54,13 @@ class Dispatcher:
             return DispatchResult(task_id, TaskStatus.REJECTED, error="trust level does not permit execution")
         self.activity.emit("task.received", task_id, capability=task.get("capability"))
         try:
-            capability = self.registry.get(str(task["capability"]))
-            self.policy.authorize(str(task["capability"]), security=security)
-            self._record("task.authorized", task, {"capability": capability["id"]})
-            self.activity.emit("task.authorized", task_id, capability=capability["id"])
+            capability_id = str(task["capability"])
+            control = task.get("safety_control") or control_for_capability(capability_id)
+            self.safety.require(control) if control else None
+            capability = self.registry.get(capability_id)
+            self.policy.authorize(capability_id, security=security)
+            self._record("task.authorized", task, {"capability": capability["id"], "safety_control": control})
+            self.activity.emit("task.authorized", task_id, capability=capability["id"], safety_control=control)
             result = self.executor(task, capability)
             self._record("task.executed", task, {"result": result})
             self.activity.emit("task.executed", task_id)
@@ -78,7 +79,7 @@ class Dispatcher:
             self._record("task.published", task, {"status": "passed"})
             self.activity.emit("task.passed", task_id)
             return DispatchResult(task_id, "passed", result, audit)
-        except (KeyError, ValueError, PolicyDenied) as exc:
+        except (KeyError, ValueError, PolicyDenied, PermissionError) as exc:
             self._record("task.rejected", task, {"error": str(exc)})
             return DispatchResult(task_id, "rejected", error=str(exc))
         except Exception as exc:
@@ -92,21 +93,12 @@ class Dispatcher:
         security: dict[str, Any] | None = None,
     ) -> WorkflowRunResult:
         """Run every workflow step through the governed task dispatcher."""
-        self._record(
-            "workflow.started",
-            {"task_id": plan.workflow_id},
-            {"objective": plan.objective, "steps": len(plan.steps)},
-        )
-        runner = WorkflowRunner(
-            lambda task: self.dispatch(task, security=security),
-            evidence=self.evidence,
-        )
+        self._record("workflow.started", {"task_id": plan.workflow_id},
+                     {"objective": plan.objective, "steps": len(plan.steps)})
+        runner = WorkflowRunner(lambda task: self.dispatch(task, security=security), evidence=self.evidence)
         result = runner.run(plan)
-        self._record(
-            "workflow.completed",
-            {"task_id": plan.workflow_id},
-            {"status": result.status, "escalated": result.escalated},
-        )
+        self._record("workflow.completed", {"task_id": plan.workflow_id},
+                     {"status": result.status, "escalated": result.escalated})
         return result
 
     def _record(self, event: str, task: dict[str, Any], data: dict[str, Any]) -> None:
