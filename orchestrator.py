@@ -32,7 +32,7 @@ import json
 import struct
 import os
 import sys
-import argparse
+import argparse\n\nRAW_FLEET_ENABLED = os.environ.get("JARVIS_ALLOW_RAW_FLEET", "").lower() == "true"
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from http.server import BaseHTTPRequestHandler, HTTPServer

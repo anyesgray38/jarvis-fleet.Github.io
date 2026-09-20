@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 
-TERMINAL = {"passed", "rejected", "failed", "skipped"}
+TERMINAL = {"passed", "rejected", "failed", "skipped", "escalated"}
 
 
 @dataclass
