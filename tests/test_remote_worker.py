@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from jarvis.remote_worker import model_plan, snapshot
+from jarvis.remote_worker import deterministic_inspection, model_plan, snapshot
 
 
 class RemoteWorkerTests(unittest.TestCase):
@@ -30,6 +30,18 @@ class RemoteWorkerTests(unittest.TestCase):
         self.assertEqual(call["purpose"], "research")
         self.assertTrue(call["local_only"])
         self.assertFalse(call["allow_external"])
+
+
+    def test_deterministic_inspection_fallback_is_read_only(self):
+        report = deterministic_inspection(
+            "identify test improvements",
+            "--- tests/test_example.py ---\nimport unittest\n"
+            "--- .github/workflows/aegis-tests.yml ---\npython3 -m unittest\n",
+        )
+        self.assertIn("Deterministic read-only inspection fallback", report)
+        self.assertIn("1.", report)
+        self.assertIn("2.", report)
+        self.assertIn("3.", report)
 
     def test_unsupported_capability_is_not_accepted_by_worker(self):
         from jarvis.remote_worker import CAPABILITIES
