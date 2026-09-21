@@ -42,6 +42,8 @@ class RemoteWorkerTests(unittest.TestCase):
         self.assertIn("1.", report)
         self.assertIn("2.", report)
         self.assertIn("3.", report)
+        self.assertIn("1 test files", report)
+        self.assertIn("1 GitHub Actions workflow files", report)
 
     def test_unsupported_capability_is_not_accepted_by_worker(self):
         from jarvis.remote_worker import CAPABILITIES

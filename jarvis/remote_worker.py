@@ -26,7 +26,7 @@ def snapshot(project: Path) -> str:
 
 def deterministic_inspection(objective: str, context: str) -> str:
     """Produce a safe read-only report when no approved local model is reachable."""
-    files = [line[5:-4] for line in context.splitlines() if line.startswith("--- ") and line.endswith(" ---")]
+    files = [line.removeprefix("--- ").removesuffix(" ---") for line in context.splitlines() if line.startswith("--- ") and line.endswith(" ---")]
     test_files = [name for name in files if name.startswith("tests/") and name.endswith(".py")]
     workflow_files = [name for name in files if name.startswith(".github/workflows/") and name.endswith((".yml", ".yaml"))]
     has_coverage = any(name in {"pyproject.toml", "pytest.ini", ".coveragerc", "setup.cfg"} for name in files)
