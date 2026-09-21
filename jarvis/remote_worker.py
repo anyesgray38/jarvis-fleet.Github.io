@@ -24,9 +24,13 @@ def snapshot(project: Path) -> str:
         total += len(data)
     return "".join(chunks)
 
-def deterministic_inspection(objective: str, context: str) -> str:
+def deterministic_inspection(objective: str, context: str, project: Path | None = None) -> str:
     """Produce a safe read-only report when no approved local model is reachable."""
-    files = [line.removeprefix("--- ").removesuffix(" ---") for line in context.splitlines() if line.startswith("--- ") and line.endswith(" ---")]
+    if project is not None:
+        inventory_result = run(["git", "ls-files"], cwd=project)
+        files = inventory_result.stdout.splitlines()
+    else:
+        files = [line.removeprefix("--- ").removesuffix(" ---") for line in context.splitlines() if line.startswith("--- ") and line.endswith(" ---")]
     test_files = [name for name in files if name.startswith("tests/") and name.endswith(".py")]
     workflow_files = [name for name in files if name.startswith(".github/workflows/") and name.endswith((".yml", ".yaml"))]
     has_coverage = any(name in {"pyproject.toml", "pytest.ini", ".coveragerc", "setup.cfg"} for name in files)
@@ -156,7 +160,7 @@ def main() -> int:
         plan = model_plan(args.objective, context, args.capability)
     except LookupError as exc:
         if args.capability == "terminal.inspect":
-            report = deterministic_inspection(args.objective, context)
+            report = deterministic_inspection(args.objective, context, project)
             issue_comment(args.issue, f"## AEGIS inspection report\\n\\n**Job:** `{args.job_id}`\\n\\n{report}")
             set_status("passed")
             print(json.dumps({"stage": "reported", "job_id": args.job_id, "mode": "deterministic_fallback"}))
