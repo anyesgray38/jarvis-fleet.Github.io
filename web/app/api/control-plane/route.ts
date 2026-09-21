@@ -3,10 +3,10 @@ import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 
 /**
- * Vercel is the UI/control plane. It never talks directly to the AEGIS
+ * The remote control interface is the UI/control plane. It never talks directly to the AEGIS
  * orchestrator. The Linux AEGIS host exposes a small authenticated gateway.
  *
- * Required Vercel env:
+ * Required remote-interface env:
  *   AEGIS_GATEWAY_URL=https://<private-gateway>
  *   AEGIS_GATEWAY_TOKEN=<long-random-token>
  *
