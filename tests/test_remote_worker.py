@@ -45,6 +45,16 @@ class RemoteWorkerTests(unittest.TestCase):
         self.assertIn("1 test files", report)
         self.assertIn("1 GitHub Actions workflow files", report)
 
+
+    def test_deterministic_inspection_uses_git_inventory(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            with patch("jarvis.remote_worker.run") as run_mock:
+                run_mock.return_value.stdout = "tests/test_one.py\n.github/workflows/ci.yml\n"
+                report = deterministic_inspection("inventory", "context", project)
+            self.assertIn("1 test files", report)
+            self.assertIn("1 GitHub Actions workflow files", report)
+
     def test_unsupported_capability_is_not_accepted_by_worker(self):
         from jarvis.remote_worker import CAPABILITIES
         self.assertEqual(CAPABILITIES, {"terminal.inspect", "terminal.execute"})
