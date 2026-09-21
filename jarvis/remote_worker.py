@@ -24,6 +24,32 @@ def snapshot(project: Path) -> str:
         total += len(data)
     return "".join(chunks)
 
+def deterministic_inspection(objective: str, context: str) -> str:
+    """Produce a safe read-only report when no approved local model is reachable."""
+    files = [line[5:-4] for line in context.splitlines() if line.startswith("--- ") and line.endswith(" ---")]
+    test_files = [name for name in files if name.startswith("tests/") and name.endswith(".py")]
+    workflow_files = [name for name in files if name.startswith(".github/workflows/") and name.endswith((".yml", ".yaml"))]
+    has_coverage = any(name in {"pyproject.toml", "pytest.ini", ".coveragerc", "setup.cfg"} for name in files)
+    has_pytest = "pytest" in context.lower()
+    findings = [
+        f"Test discovery is concentrated in {len(test_files)} test files. Add an explicit coverage threshold and publish coverage artifacts so regressions are measurable.",
+        f"The repository contains {len(workflow_files)} GitHub Actions workflow files. Add a dedicated test-matrix job for supported Python/runtime combinations and make it a required PR check.",
+        (
+            "The snapshot references pytest; standardize test execution and reporting around pytest with JUnit/coverage output."
+            if has_pytest
+            else
+            "The snapshot does not show pytest configuration. Add a pytest-based test runner with JUnit/coverage output while retaining compatibility with the existing suite."
+        ),
+    ]
+    if has_coverage:
+        findings[0] = "Coverage-related configuration is present, but the test infrastructure should enforce a minimum threshold in CI and publish the report as a build artifact."
+    return (
+        "Deterministic read-only inspection fallback was used because no approved local model "
+        "was available. No files were modified.\n\n"
+        + "\n".join(f"{i}. {finding}" for i, finding in enumerate(findings, 1))
+        + f"\n\nObjective: {objective}"
+    )
+
 def model_plan(objective: str, context: str, capability: str) -> dict[str, Any]:
     from jarvis.model_service import ModelRuntime
     if capability == "terminal.inspect":
@@ -129,8 +155,14 @@ def main() -> int:
     try:
         plan = model_plan(args.objective, context, args.capability)
     except LookupError as exc:
+        if args.capability == "terminal.inspect":
+            report = deterministic_inspection(args.objective, context)
+            issue_comment(args.issue, f"## AEGIS inspection report\\n\\n**Job:** `{args.job_id}`\\n\\n{report}")
+            set_status("passed")
+            print(json.dumps({"stage": "reported", "job_id": args.job_id, "mode": "deterministic_fallback"}))
+            return 0
         set_status("escalated")
-        issue_comment(args.issue, f"AEGIS job `{args.job_id}` escalated: no approved local model is currently available. The worker will not use an external model.\n\nReason: `{exc}`")
+        issue_comment(args.issue, f"AEGIS job `{args.job_id}` escalated: no approved local model is currently available. The worker will not use an external model.\\n\\nReason: `{exc}`")
         print(json.dumps({"stage": "escalated", "job_id": args.job_id, "reason": str(exc)}))
         return 0
     print(json.dumps({"stage": "plan", "summary": plan.get("summary", "")}))
