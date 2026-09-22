@@ -45,7 +45,14 @@ class ModelRouter:
             spec = {"id": provider.provider_id, "external": False, "modalities": ["text"]}
             spec.update(self.provider_specs.get(provider.provider_id, {}))
             registered = self.registry.candidate_map(provider.provider_id) if self.registry else None
-            for live_model in provider.models():
+            try:
+                live_models = provider.models()
+            except Exception:
+                # Provider reachability is evaluated independently. An offline
+                # optional provider must not prevent healthy providers from
+                # serving a request.
+                continue
+            for live_model in live_models:
                 model_id = live_model.get("id")
                 if not isinstance(model_id, str):
                     continue

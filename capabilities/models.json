@@ -2,6 +2,20 @@
   "version": 1,
   "models": [
     {
+      "id": "qwen3:1.7b",
+      "family": "qwen3",
+      "provider": "ollama",
+      "source": "https://ollama.com/library/qwen3",
+      "format": "GGUF",
+      "quantization": "Q4_K_M",
+      "modalities": ["text"],
+      "tags": ["general", "reasoning", "coding", "local", "chat"],
+      "purposes": ["general", "coding", "research", "planning"],
+      "local_only": true,
+      "experimental": false,
+      "notes": "Ollama-managed local model."
+    },
+    {
       "id": "llmfan46/gemma-3-27b-it-ultra-uncensored-heretic-GGUF:Q4_K_M",
       "family": "gemma-3-27b",
       "provider": "localai",

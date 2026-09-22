@@ -32,6 +32,5 @@ class OpenAIProviderTests(unittest.TestCase):
         self.assertEqual(request.get_header("Authorization"), "Bearer test-key")
         self.assertEqual(models, [{"id": "gpt-5-mini"}])
 
-
 if __name__ == "__main__":
     unittest.main()

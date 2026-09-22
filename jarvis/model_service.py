@@ -32,6 +32,7 @@ class ModelRuntime:
             model_registry_path=MODEL_REGISTRY,
             provider_registry_path=PROVIDER_REGISTRY,
             localai_url=localai_url or os.getenv("AEGIS_LOCALAI_URL", "http://127.0.0.1:8080"),
+            ollama_url=os.getenv("AEGIS_OLLAMA_URL", "http://127.0.0.1:11434"),
             timeout=timeout,
         )
 

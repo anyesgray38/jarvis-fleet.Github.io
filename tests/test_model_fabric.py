@@ -61,7 +61,17 @@ class ModelFabricTests(unittest.TestCase):
         model_path = Path(__file__).parents[1] / "capabilities" / "models.json"
         with patch.dict(os.environ, {"AEGIS_OPENAI_API_KEY": "test-key"}, clear=False):
             fabric = ModelFabric.from_files(model_registry_path=model_path, provider_registry_path=provider_path)
-        self.assertEqual({provider.provider_id for provider in fabric.providers}, {"localai", "openai"})
+        self.assertEqual({provider.provider_id for provider in fabric.providers}, {"localai", "ollama", "openai"})
+
+    def test_ollama_provider_is_loaded_from_local_endpoint(self):
+        provider_path = Path(__file__).parents[1] / "capabilities" / "providers.json"
+        model_path = Path(__file__).parents[1] / "capabilities" / "models.json"
+        fabric = ModelFabric.from_files(
+            model_registry_path=model_path,
+            provider_registry_path=provider_path,
+            ollama_url="http://127.0.0.1:11434",
+        )
+        self.assertEqual({provider.provider_id for provider in fabric.providers}, {"localai", "ollama"})
 
     def test_registry_rejects_duplicate_ids(self):
         payload = {"version": 1, "models": [{"id": "x", "provider": "p"}, {"id": "x", "provider": "p"}]}

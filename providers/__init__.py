@@ -5,6 +5,7 @@ from .model_fabric import ModelFabric
 from .model_registry import ModelRegistry, ModelRegistryError, RegisteredModel
 from .model_router import ModelRoute, ModelRouter
 from .openai_compatible import OpenAICompatibleConfig, OpenAICompatibleError, OpenAICompatibleProvider
+from .ollama import OllamaConfig, OllamaError, OllamaProvider
 
 __all__ = [
     "LocalAIConfig",
@@ -19,4 +20,7 @@ __all__ = [
     "OpenAICompatibleConfig",
     "OpenAICompatibleError",
     "OpenAICompatibleProvider",
+    "OllamaConfig",
+    "OllamaError",
+    "OllamaProvider",
 ]

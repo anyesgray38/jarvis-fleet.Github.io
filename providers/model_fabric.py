@@ -10,6 +10,7 @@ from .localai import LocalAIConfig, LocalAIProvider
 from .model_registry import ModelRegistry
 from .model_router import ModelRouter
 from .openai_compatible import OpenAICompatibleConfig, OpenAICompatibleProvider
+from .ollama import OllamaConfig, OllamaProvider
 
 
 class ModelFabric:
@@ -27,6 +28,7 @@ class ModelFabric:
         model_registry_path: str | Path,
         provider_registry_path: str | Path,
         localai_url: str = "http://127.0.0.1:8080",
+        ollama_url: str = "http://127.0.0.1:11434",
         timeout: float = 120.0,
     ) -> "ModelFabric":
         registry = ModelRegistry.from_file(model_registry_path)
@@ -40,6 +42,14 @@ class ModelFabric:
             specs[provider_id] = spec
             if provider_id == "localai":
                 providers.append(LocalAIProvider(LocalAIConfig(base_url=localai_url, timeout=timeout)))
+            elif provider_id == "ollama":
+                base_url = os.getenv(
+                    spec.get("base_url_env", "AEGIS_OLLAMA_URL"),
+                    spec.get("default_base_url", ollama_url),
+                )
+                providers.append(
+                    OllamaProvider(OllamaConfig(base_url=base_url, timeout=timeout))
+                )
             elif provider_id == "openai":
                 # External inference is deliberately opt-in. The provider is not
                 # instantiated unless its secret is present in the process env.
