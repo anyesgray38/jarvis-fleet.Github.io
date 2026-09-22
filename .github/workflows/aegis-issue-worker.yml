@@ -40,13 +40,20 @@ jobs:
               raise SystemExit("invalid job_id")
           if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", fields["repository"]):
               raise SystemExit("repository must be owner/name")
+          if fields["capability"] != "terminal.execute":
+              raise SystemExit("unsupported capability")
+          if not re.fullmatch(r"[A-Za-z0-9_./-]+", fields["ref"]):
+              raise SystemExit("invalid ref")
           objective = re.search(r"^### Objective\s*\n(.*?)(?:\n\n|\Z)", body, re.MULTILINE | re.DOTALL)
           if not objective:
               raise SystemExit("missing objective")
           fields["objective"] = objective.group(1).strip()
+          if not fields["objective"] or len(fields["objective"]) > 8000:
+              raise SystemExit("objective must be 1-8000 characters")
+          delimiter = "AEGIS_" + __import__("secrets").token_hex(16)
           for key, value in fields.items():
               with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
-                  out.write(f"{key}<<EOF\n{value}\nEOF\n")
+                  out.write(f"{key}<<{delimiter}\n{value}\n{delimiter}\n")
           PY
 
       - name: Report start

@@ -16,10 +16,13 @@ on:
         required: true
         default: "master"
         type: string
-      command:
-        description: "Bounded command to execute in the checked-out project"
+      capability:
+        description: "Governed worker capability"
         required: true
-        type: string
+        default: "terminal.execute"
+        type: choice
+        options:
+          - terminal.execute
       job_id:
         description: "AEGIS job identifier"
         required: false
@@ -31,7 +34,7 @@ permissions:
   pull-requests: write
 
 concurrency:
-  group: aegis-remote-\${{ inputs.repository }}-\${{ inputs.job_id || github.run_id }}
+  group: aegis-remote-${{ inputs.repository }}-${{ inputs.job_id || github.run_id }}
   cancel-in-progress: false
 
 jobs:
@@ -39,41 +42,42 @@ jobs:
     name: AEGIS project worker
     runs-on: [self-hosted, linux, aegis-worker]
     timeout-minutes: 120
+    env:
+      GH_TOKEN: ${{ secrets.AEGIS_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
     steps:
-      - name: Checkout project
+      - name: Checkout AEGIS control plane
         uses: actions/checkout@v4
         with:
-          repository: \${{ inputs.repository }}
-          ref: \${{ inputs.ref }}
           fetch-depth: 0
+          path: aegis
+
+      - name: Checkout target project
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.repository }}
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+          path: project
+          token: ${{ secrets.AEGIS_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Identify worker
         run: |
-          echo "AEGIS_JOB_ID=\${{ inputs.job_id || github.run_id }}" >> "$GITHUB_ENV"
+          set -euo pipefail
+          echo "AEGIS_JOB_ID=${{ inputs.job_id || format('job_{0}', github.run_id) }}" >> "$GITHUB_ENV"
           echo "AEGIS_WORKER=$(hostname)" >> "$GITHUB_ENV"
 
-      - name: Run governed project task
+      - name: Run governed project worker
         env:
-          AEGIS_OBJECTIVE: \${{ inputs.objective }}
-          AEGIS_COMMAND: \${{ inputs.command }}
+          AEGIS_OBJECTIVE: ${{ inputs.objective }}
+          AEGIS_CAPABILITY: ${{ inputs.capability }}
         run: |
           set -euo pipefail
-          printf '%s\n' "AEGIS OBJECTIVE: $AEGIS_OBJECTIVE"
-          printf '%s\n' "AEGIS WORKER: $AEGIS_WORKER"
-          printf '%s\n' "AEGIS JOB: $AEGIS_JOB_ID"
-          printf '%s\n' "AEGIS COMMAND: $AEGIS_COMMAND"
-          bash -lc "$AEGIS_COMMAND"
-
-      - name: Run repository verification
-        if: \${{ success() }}
-        run: |
-          set -euo pipefail
-          if [ -f pyproject.toml ] || [ -d tests ]; then
-            python3 -m compileall -q .
-            python3 -m unittest discover -s tests -p 'test_*.py' -v
-          else
-            echo "No Python test suite detected; repository-specific verification is required."
-          fi
+          PYTHONPATH="$GITHUB_WORKSPACE/aegis" python3 -m jarvis.remote_worker \
+            --project project \
+            --job-id "$AEGIS_JOB_ID" \
+            --capability "$AEGIS_CAPABILITY" \
+            --issue "$GITHUB_REPOSITORY#$GITHUB_RUN_ID" \
+            --objective "$AEGIS_OBJECTIVE"
 
       - name: Publish worker summary
         if: always()
@@ -81,15 +85,15 @@ jobs:
           {
             echo "## AEGIS Remote Worker"
             echo
-            echo "Job: \${{ inputs.job_id || github.run_id }}"
+            echo "Job: $AEGIS_JOB_ID"
             echo
-            echo "Objective: \${{ inputs.objective }}"
+            echo "Objective: ${{ inputs.objective }}"
             echo
-            echo "Repository: \${{ inputs.repository }}"
+            echo "Repository: ${{ inputs.repository }}"
             echo
-            echo "Ref: \${{ inputs.ref }}"
+            echo "Ref: ${{ inputs.ref }}"
             echo
             echo "Worker: $AEGIS_WORKER"
             echo
-            echo "Result: \${{ job.status }}"
+            echo "Result: ${{ job.status }}"
           } >> "$GITHUB_STEP_SUMMARY"

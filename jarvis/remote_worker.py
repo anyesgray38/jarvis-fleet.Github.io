@@ -1,11 +1,15 @@
 """Remote AEGIS project worker: inspect, propose, safely apply, verify, and publish a PR."""
 from __future__ import annotations
-import argparse, json, subprocess
+import argparse, json, re, subprocess
 from pathlib import Path
 from typing import Any
 
 MAX_FILE_BYTES=40_000
 MAX_CONTEXT=180_000
+MAX_OBJECTIVE=8_000
+ALLOWED_CAPABILITIES={"terminal.execute"}
+PROTECTED_PREFIXES=(".git/", ".github/workflows/", "actions-runner/")
+PROTECTED_NAMES={".env", ".env.example", "credentials", "credentials.json"}
 
 def run(cmd:list[str],*,cwd:Path,timeout:int=300)->subprocess.CompletedProcess[str]:
     return subprocess.run(cmd,cwd=cwd,text=True,capture_output=True,timeout=timeout,check=False)
@@ -41,10 +45,51 @@ Do not include shell commands, secrets, generated binaries, or files outside the
 If the objective cannot be safely implemented from the snapshot, return an empty patch and explain why."""
     result=ModelRuntime().chat(messages=[{"role":"user","content":prompt}],purpose="coding",
                                local_only=True,allow_external=False)
-    return json.loads(result["response"]["content"])
+    content=result.get("response",{}).get("content") if isinstance(result,dict) else None
+    if not isinstance(content,str):
+        raise RuntimeError("coding agent returned no plan content")
+    try:
+        plan=json.loads(content)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError("coding agent returned invalid JSON") from exc
+    if not isinstance(plan,dict) or not isinstance(plan.get("summary"),str) or not isinstance(plan.get("patch"),str):
+        raise RuntimeError("coding agent plan must contain string summary and patch fields")
+    return plan
+
+def _patch_paths(patch:str)->set[str]:
+    paths:set[str]=set()
+    for line in patch.splitlines():
+        if not line.startswith("diff --git "):
+            continue
+        match=re.match(r"^diff --git a/(.+) b/(.+)$",line)
+        if not match:
+            raise RuntimeError("patch contains an invalid file header")
+        paths.update(match.groups())
+    if not paths:
+        raise RuntimeError("patch contains no file paths")
+    return paths
+
+def validate_patch(patch:str)->None:
+    if "GIT binary patch" in patch or "Binary files " in patch:
+        raise RuntimeError("binary patches are not permitted")
+    for path in _patch_paths(patch):
+        normalized=path.replace("\\","/")
+        parts=Path(normalized).parts
+        if Path(normalized).is_absolute() or ".." in parts:
+            raise RuntimeError(f"patch path escapes the project: {path}")
+        if normalized.startswith(PROTECTED_PREFIXES) or Path(normalized).name in PROTECTED_NAMES:
+            raise RuntimeError(f"patch targets a protected path: {path}")
+
+def ensure_clean(project:Path)->None:
+    status=run(["git","status","--porcelain"],cwd=project)
+    if status.returncode:
+        raise RuntimeError(status.stderr.strip() or "unable to inspect project status")
+    if status.stdout.strip():
+        raise RuntimeError("target project checkout must be clean before AEGIS applies a patch")
 
 def apply_patch(project:Path,patch:str)->None:
     if not patch.strip(): raise RuntimeError("coding agent returned no patch")
+    validate_patch(patch)
     check=run(["git","apply","--check","--whitespace=error-all","-"],cwd=project)
     if check.returncode: raise RuntimeError(f"patch validation failed: {check.stderr.strip()}")
     applied=subprocess.run(["git","apply","--whitespace=error-all","-"],cwd=project,input=patch,
@@ -89,6 +134,11 @@ def main()->int:
     args=parser.parse_args()
     project=Path(args.project).resolve()
     if not (project/".git").exists(): raise RuntimeError("target project is not a git checkout")
+    if not args.objective.strip() or len(args.objective)>MAX_OBJECTIVE:
+        raise RuntimeError(f"objective must be 1-{MAX_OBJECTIVE} characters")
+    if args.capability not in ALLOWED_CAPABILITIES:
+        raise RuntimeError(f"unsupported remote worker capability: {args.capability}")
+    ensure_clean(project)
     print(json.dumps({"stage":"inspect","job_id":args.job_id,"capability":args.capability}))
     context=snapshot(project)
     plan=model_plan(args.objective,context)
