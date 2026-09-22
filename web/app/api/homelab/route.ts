@@ -28,15 +28,16 @@ export async function GET() {
   const liveAgents = agentList.filter((agent: { alive?: boolean }) => agent.alive).length
   const activeJobs = jobList.filter((job: { status?: string }) => ['running', 'queued'].includes(job.status || '')).length
   const connected = Boolean(orchestrator) && health.online
+  const modelReady = runtime.online && runtime.data?.ready !== false
 
   return NextResponse.json({
     ok: true,
     timestamp: new Date().toISOString(),
-    overall: connected && runtime.online ? 'healthy' : connected || runtime.online ? 'degraded' : 'offline',
+    overall: connected && modelReady ? 'healthy' : connected || modelReady ? 'degraded' : 'offline',
     services: {
       control_center: { status: 'online' },
       orchestrator: { status: health.online ? 'online' : 'offline', error: health.error },
-      model_runtime: { status: runtime.online ? 'online' : 'offline', error: runtime.error, data: runtime.data },
+      model_runtime: { status: modelReady ? 'online' : runtime.online ? 'degraded' : 'offline', error: runtime.error, data: runtime.data },
       fleet: { status: agents.online ? 'online' : 'offline', live: liveAgents, total: agentList.length, error: agents.error },
       jobs: { status: jobs.online ? 'online' : 'offline', active: activeJobs, total: jobList.length, error: jobs.error },
     },

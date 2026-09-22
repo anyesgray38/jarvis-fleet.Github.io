@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "providers": [
     {
       "id": "localai",
@@ -11,6 +11,22 @@
       "policy": {
         "local_preferred": true,
         "external_data_required": false
+      }
+    },
+    {
+      "id": "openai",
+      "kind": "model_inference",
+      "status": "supported",
+      "transport": "openai_compatible_http",
+      "external": true,
+      "default_base_url": "https://api.openai.com",
+      "api_key_env": "AEGIS_OPENAI_API_KEY",
+      "base_url_env": "AEGIS_OPENAI_URL",
+      "modalities": ["text", "vision"],
+      "policy": {
+        "local_preferred": false,
+        "external_data_required": false,
+        "requires_explicit_external_opt_in": true
       }
     }
   ]

@@ -1,9 +1,15 @@
 .git
 .github
+.jarvis
+.dockerignore
+actions-runner
+deploy/.env
 .next
 node_modules
+web/node_modules
 __pycache__
 *.pyc
+*.log
 *.crt
 *.key
 .env

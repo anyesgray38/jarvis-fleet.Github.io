@@ -25,7 +25,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path == "/health":
-            return self._send(200, {"ok": True, "service": "aegis-model-runtime"})
+            return self._send(200, self.runtime.health())
         return self._send(404, {"ok": False, "error": "not found"})
 
     def do_POST(self):

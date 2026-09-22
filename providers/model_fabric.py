@@ -2,12 +2,14 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any
 
 from .localai import LocalAIConfig, LocalAIProvider
 from .model_registry import ModelRegistry
 from .model_router import ModelRouter
+from .openai_compatible import OpenAICompatibleConfig, OpenAICompatibleProvider
 
 
 class ModelFabric:
@@ -38,6 +40,21 @@ class ModelFabric:
             specs[provider_id] = spec
             if provider_id == "localai":
                 providers.append(LocalAIProvider(LocalAIConfig(base_url=localai_url, timeout=timeout)))
+            elif provider_id == "openai":
+                # External inference is deliberately opt-in. The provider is not
+                # instantiated unless its secret is present in the process env.
+                api_key = os.getenv(spec.get("api_key_env", "AEGIS_OPENAI_API_KEY"), "").strip()
+                if api_key:
+                    base_url = os.getenv(
+                        spec.get("base_url_env", "AEGIS_OPENAI_URL"),
+                        spec.get("default_base_url", "https://api.openai.com"),
+                    )
+                    providers.append(
+                        OpenAICompatibleProvider(
+                            "openai",
+                            OpenAICompatibleConfig(base_url=base_url, api_key=api_key, timeout=timeout),
+                        )
+                    )
         return cls(registry, providers, specs)
 
     def resolve(self, **kwargs: Any):

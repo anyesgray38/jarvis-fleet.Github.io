@@ -35,6 +35,20 @@ class ModelRuntimeTests(unittest.TestCase):
         write.assert_called_once()
         self.assertTrue(write.call_args.args[0]["verified"])
 
+    def test_health_distinguishes_provider_online_from_model_ready(self):
+        runtime = ModelRuntime.__new__(ModelRuntime)
+        provider = Mock()
+        provider.provider_id = "localai"
+        provider.models.return_value = []
+        runtime.fabric = Mock()
+        runtime.fabric.providers = [provider]
+        self.assertEqual(runtime.health(), {
+            "ok": True,
+            "service": "aegis-model-runtime",
+            "ready": False,
+            "providers": [{"provider": "localai", "online": True, "models": 0}],
+        })
+
 
 if __name__ == "__main__":
     unittest.main()

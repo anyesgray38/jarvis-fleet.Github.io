@@ -35,6 +35,21 @@ class ModelRuntime:
             timeout=timeout,
         )
 
+    def health(self) -> dict[str, Any]:
+        """Report provider reachability separately from inference readiness."""
+        providers: list[dict[str, Any]] = []
+        ready = False
+        for provider in self.fabric.providers:
+            try:
+                models = provider.models()
+                count = len(models) if isinstance(models, list) else 0
+                providers.append({"provider": provider.provider_id, "online": True, "models": count})
+                ready = ready or count > 0
+            except Exception as exc:
+                providers.append({"provider": provider.provider_id, "online": False, "models": 0,
+                                  "error": str(exc)})
+        return {"ok": True, "service": "aegis-model-runtime", "ready": ready, "providers": providers}
+
     def chat(self, *, messages: list[dict[str, str]], purpose: str = "general", required_tags: set[str] | None = None, modality: str = "text", preferred_provider: str | None = None, local_only: bool = True, allow_external: bool = False, metadata: dict[str, Any] | None = None, **kwargs: Any) -> dict[str, Any]:
         if not messages or not all(isinstance(m, dict) and isinstance(m.get("role"), str) and isinstance(m.get("content"), str) for m in messages):
             raise ValueError("messages must be a non-empty list of role/content objects")

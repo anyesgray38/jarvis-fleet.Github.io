@@ -61,6 +61,8 @@ services:
       AEGIS_MODEL_BIND: 127.0.0.1
       AEGIS_MODEL_PORT: 8891
       AEGIS_LOCALAI_URL: ${AEGIS_LOCALAI_URL:-http://127.0.0.1:8080}
+      AEGIS_OPENAI_API_KEY: ${AEGIS_OPENAI_API_KEY:-}
+      AEGIS_OPENAI_URL: ${AEGIS_OPENAI_URL:-https://api.openai.com}
       PYTHONUNBUFFERED: "1"
     volumes:
       - aegis-evidence:/app/evidence
