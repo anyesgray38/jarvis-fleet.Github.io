@@ -4,6 +4,7 @@ from .localai import LocalAIConfig, LocalAIError, LocalAIProvider
 from .model_fabric import ModelFabric
 from .model_registry import ModelRegistry, ModelRegistryError, RegisteredModel
 from .model_router import ModelRoute, ModelRouter
+from .openai import OpenAIProvider
 from .openai_compatible import OpenAICompatibleConfig, OpenAICompatibleError, OpenAICompatibleProvider
 
 __all__ = [
@@ -16,6 +17,7 @@ __all__ = [
     "RegisteredModel",
     "ModelRoute",
     "ModelRouter",
+    "OpenAIProvider",
     "OpenAICompatibleConfig",
     "OpenAICompatibleError",
     "OpenAICompatibleProvider",
