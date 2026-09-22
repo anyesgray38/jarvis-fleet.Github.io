@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from .localai import LocalAIConfig, LocalAIProvider
+from .openai import OpenAIProvider
 from .model_registry import ModelRegistry
 from .model_router import ModelRouter
 
@@ -25,6 +26,7 @@ class ModelFabric:
         model_registry_path: str | Path,
         provider_registry_path: str | Path,
         localai_url: str = "http://127.0.0.1:8080",
+        openai_url: str = "https://api.openai.com",
         timeout: float = 120.0,
     ) -> "ModelFabric":
         registry = ModelRegistry.from_file(model_registry_path)
@@ -38,6 +40,12 @@ class ModelFabric:
             specs[provider_id] = spec
             if provider_id == "localai":
                 providers.append(LocalAIProvider(LocalAIConfig(base_url=localai_url, timeout=timeout)))
+            elif provider_id == "openai":
+                try:
+                    providers.append(OpenAIProvider(base_url=openai_url, timeout=timeout))
+                except RuntimeError:
+                    # Keep AEGIS usable in local-only mode when no OpenAI secret is configured.
+                    continue
         return cls(registry, providers, specs)
 
     def resolve(self, **kwargs: Any):
