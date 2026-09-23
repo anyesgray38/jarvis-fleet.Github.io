@@ -2,29 +2,31 @@
   "version": 1,
   "models": [
     {
-      "id": "qwen3:1.7b",
-      "family": "qwen3",
-      "provider": "ollama",
-      "source": "https://ollama.com/library/qwen3",
-      "format": "GGUF",
-      "quantization": "Q4_K_M",
-      "modalities": ["text"],
-      "tags": ["general", "reasoning", "coding", "local", "chat"],
-      "purposes": ["general", "coding", "research", "planning"],
-      "local_only": true,
-      "experimental": false,
-      "notes": "Ollama-managed local model."
-    },
-    {
       "id": "llmfan46/gemma-3-27b-it-ultra-uncensored-heretic-GGUF:Q4_K_M",
       "family": "gemma-3-27b",
       "provider": "localai",
       "source": "https://huggingface.co/llmfan46/gemma-3-27b-it-ultra-uncensored-heretic-GGUF",
       "format": "GGUF",
       "quantization": "Q4_K_M",
-      "modalities": ["text", "vision"],
-      "tags": ["general", "reasoning", "coding", "vision", "local", "chat"],
-      "purposes": ["general", "coding", "research", "security", "audit"],
+      "modalities": [
+        "text",
+        "vision"
+      ],
+      "tags": [
+        "general",
+        "reasoning",
+        "coding",
+        "vision",
+        "local",
+        "chat"
+      ],
+      "purposes": [
+        "general",
+        "coding",
+        "research",
+        "security",
+        "audit"
+      ],
       "local_only": true,
       "experimental": true,
       "notes": "Community decensored/abliterated Gemma 3 variant. Use only behind AEGIS policy and verification controls."
@@ -35,9 +37,24 @@
       "provider": "localai",
       "source": "https://huggingface.co/Qwen/Qwen3.8-Flash-Next",
       "format": "provider-managed",
-      "modalities": ["text", "vision"],
-      "tags": ["general", "reasoning", "coding", "long-context", "agentic", "local"],
-      "purposes": ["general", "coding", "research", "planning"],
+      "modalities": [
+        "text",
+        "vision"
+      ],
+      "tags": [
+        "general",
+        "reasoning",
+        "coding",
+        "long-context",
+        "agentic",
+        "local"
+      ],
+      "purposes": [
+        "general",
+        "coding",
+        "research",
+        "planning"
+      ],
       "local_only": true,
       "experimental": true
     },
@@ -47,24 +64,152 @@
       "provider": "localai",
       "source": "https://huggingface.co/google/gemma-4-31B-it",
       "format": "provider-managed",
-      "modalities": ["text", "vision"],
-      "tags": ["general", "reasoning", "coding", "vision", "local"],
-      "purposes": ["general", "coding", "research", "verification"],
+      "modalities": [
+        "text",
+        "vision"
+      ],
+      "tags": [
+        "general",
+        "reasoning",
+        "coding",
+        "vision",
+        "local"
+      ],
+      "purposes": [
+        "general",
+        "coding",
+        "research",
+        "verification"
+      ],
       "local_only": true,
       "experimental": true
+    },
+    {
+      "id": "gpt-5.6",
+      "family": "gpt-5.6",
+      "provider": "openai",
+      "format": "hosted",
+      "modalities": [
+        "text",
+        "vision"
+      ],
+      "tags": [
+        "general",
+        "reasoning",
+        "coding",
+        "hosted",
+        "chat"
+      ],
+      "purposes": [
+        "general",
+        "coding",
+        "research",
+        "planning",
+        "verification"
+      ],
+      "local_only": false,
+      "experimental": false
+    },
+    {
+      "id": "gpt-5.6-sol",
+      "family": "gpt-5.6",
+      "provider": "openai",
+      "format": "hosted",
+      "modalities": [
+        "text",
+        "vision"
+      ],
+      "tags": [
+        "general",
+        "reasoning",
+        "coding",
+        "hosted",
+        "flagship"
+      ],
+      "purposes": [
+        "general",
+        "coding",
+        "research",
+        "planning",
+        "verification",
+        "audit"
+      ],
+      "local_only": false,
+      "experimental": false
+    },
+    {
+      "id": "gpt-5.6-terra",
+      "family": "gpt-5.6",
+      "provider": "openai",
+      "format": "hosted",
+      "modalities": [
+        "text",
+        "vision"
+      ],
+      "tags": [
+        "general",
+        "reasoning",
+        "coding",
+        "hosted"
+      ],
+      "purposes": [
+        "general",
+        "coding",
+        "research",
+        "planning"
+      ],
+      "local_only": false,
+      "experimental": false
+    },
+    {
+      "id": "gpt-5.6-luna",
+      "family": "gpt-5.6",
+      "provider": "openai",
+      "format": "hosted",
+      "modalities": [
+        "text",
+        "vision"
+      ],
+      "tags": [
+        "general",
+        "reasoning",
+        "coding",
+        "hosted",
+        "cost-sensitive"
+      ],
+      "purposes": [
+        "general",
+        "coding",
+        "research"
+      ],
+      "local_only": false,
+      "experimental": false
     },
     {
       "id": "gpt-5-mini",
       "family": "gpt-5",
       "provider": "openai",
-      "source": "https://platform.openai.com/docs/models",
       "format": "provider-managed",
-      "modalities": ["text", "vision"],
-      "tags": ["general", "reasoning", "coding", "research", "external"],
-      "purposes": ["general", "coding", "research", "planning"],
+      "modalities": [
+        "text",
+        "vision"
+      ],
+      "tags": [
+        "general",
+        "reasoning",
+        "coding",
+        "research",
+        "external"
+      ],
+      "purposes": [
+        "general",
+        "coding",
+        "research",
+        "planning"
+      ],
       "local_only": false,
       "experimental": false,
-      "notes": "OpenAI-hosted model. Requires AEGIS_OPENAI_API_KEY and an explicit external-inference request."
+      "notes": "OpenAI-hosted model. Requires an explicit external-inference request."
     }
   ]
 }

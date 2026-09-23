@@ -1,35 +1,63 @@
+import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
-from jarvis.remote_worker import apply_patch, validate_patch, ensure_clean
+from jarvis.remote_worker import deterministic_inspection, model_plan, snapshot
 
 
-class RemoteWorkerSafetyTests(unittest.TestCase):
-    def test_rejects_binary_patch(self):
-        with self.assertRaises(RuntimeError):
-            validate_patch("diff --git a/app.py b/app.py\nGIT binary patch")
+class RemoteWorkerTests(unittest.TestCase):
+    def test_snapshot_is_read_only_context(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / ".git").mkdir()
+            (root / "README.md").write_text("AEGIS test", encoding="utf-8")
+            with patch("jarvis.remote_worker.run") as run_mock:
+                run_mock.return_value.stdout = "README.md\n"
+                text = snapshot(root)
+            self.assertIn("--- README.md ---", text)
+            self.assertIn("AEGIS test", text)
 
-    def test_rejects_protected_workflow(self):
-        patch = "diff --git a/.github/workflows/publish.yml b/.github/workflows/publish.yml\n"
-        with self.assertRaises(RuntimeError):
-            validate_patch(patch)
+    @patch("jarvis.model_service.ModelRuntime")
+    def test_inspect_requests_report_without_patch(self, runtime_cls):
+        runtime_cls.return_value.chat.return_value = {
+            "response": {"content": '{"summary":"ok","report":"three findings"}'}
+        }
+        result = model_plan("inspect tests", "repo context", "terminal.inspect")
+        self.assertEqual(result["report"], "three findings")
+        call = runtime_cls.return_value.chat.call_args.kwargs
+        self.assertEqual(call["purpose"], "research")
+        self.assertTrue(call["local_only"])
+        self.assertFalse(call["allow_external"])
 
-    def test_accepts_normal_source_patch(self):
-        validate_patch("diff --git a/app.py b/app.py\n")
 
-    def test_requires_clean_checkout(self):
+    def test_deterministic_inspection_fallback_is_read_only(self):
+        report = deterministic_inspection(
+            "identify test improvements",
+            "--- tests/test_example.py ---\nimport unittest\n"
+            "--- .github/workflows/aegis-tests.yml ---\npython3 -m unittest\n",
+        )
+        self.assertIn("Deterministic read-only inspection fallback", report)
+        self.assertIn("1.", report)
+        self.assertIn("2.", report)
+        self.assertIn("3.", report)
+        self.assertIn("1 test files", report)
+        self.assertIn("1 GitHub Actions workflow files", report)
+
+
+    def test_deterministic_inspection_uses_git_inventory(self):
         with tempfile.TemporaryDirectory() as tmp:
             project = Path(tmp)
-            (project / ".git").mkdir()
-            with self.assertRaises(RuntimeError):
-                ensure_clean(project)
+            with patch("jarvis.remote_worker.run") as run_mock:
+                run_mock.return_value.stdout = "tests/test_one.py\n.github/workflows/ci.yml\n"
+                report = deterministic_inspection("inventory", "context", project)
+            self.assertIn("1 test files", report)
+            self.assertIn("1 GitHub Actions workflow files", report)
 
-    def test_apply_patch_rejects_protected_target(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            project = Path(tmp)
-            with self.assertRaises(RuntimeError):
-                apply_patch(project, "diff --git a/.env b/.env\n")
+    def test_unsupported_capability_is_not_accepted_by_worker(self):
+        from jarvis.remote_worker import CAPABILITIES
+        self.assertEqual(CAPABILITIES, {"terminal.inspect", "terminal.execute"})
 
 
 if __name__ == "__main__":

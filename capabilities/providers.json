@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 2,
   "providers": [
     {
       "id": "localai",
@@ -7,7 +7,13 @@
       "status": "supported",
       "transport": "openai_compatible_http",
       "default_base_url": "http://127.0.0.1:8080",
-      "modalities": ["text", "vision", "audio", "image", "video"],
+      "modalities": [
+        "text",
+        "vision",
+        "audio",
+        "image",
+        "video"
+      ],
       "policy": {
         "local_preferred": true,
         "external_data_required": false
@@ -20,7 +26,9 @@
       "transport": "ollama_http",
       "default_base_url": "http://127.0.0.1:11434",
       "base_url_env": "AEGIS_OLLAMA_URL",
-      "modalities": ["text"],
+      "modalities": [
+        "text"
+      ],
       "policy": {
         "local_preferred": true,
         "external_data_required": false
@@ -31,11 +39,11 @@
       "kind": "model_inference",
       "status": "supported",
       "transport": "openai_compatible_http",
-      "external": true,
       "default_base_url": "https://api.openai.com",
-      "api_key_env": "AEGIS_OPENAI_API_KEY",
-      "base_url_env": "AEGIS_OPENAI_URL",
-      "modalities": ["text", "vision"],
+      "modalities": [
+        "text",
+        "vision"
+      ],
       "policy": {
         "local_preferred": false,
         "external_data_required": false,

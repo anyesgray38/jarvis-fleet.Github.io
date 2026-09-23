@@ -7,9 +7,9 @@ from pathlib import Path
 from typing import Any
 
 from .localai import LocalAIConfig, LocalAIProvider
+from .openai import OpenAIProvider
 from .model_registry import ModelRegistry
 from .model_router import ModelRouter
-from .openai_compatible import OpenAICompatibleConfig, OpenAICompatibleProvider
 from .ollama import OllamaConfig, OllamaProvider
 
 
@@ -28,6 +28,7 @@ class ModelFabric:
         model_registry_path: str | Path,
         provider_registry_path: str | Path,
         localai_url: str = "http://127.0.0.1:8080",
+        openai_url: str = "https://api.openai.com",
         ollama_url: str = "http://127.0.0.1:11434",
         timeout: float = 120.0,
     ) -> "ModelFabric":
@@ -47,24 +48,11 @@ class ModelFabric:
                     spec.get("base_url_env", "AEGIS_OLLAMA_URL"),
                     spec.get("default_base_url", ollama_url),
                 )
-                providers.append(
-                    OllamaProvider(OllamaConfig(base_url=base_url, timeout=timeout))
-                )
+                providers.append(OllamaProvider(OllamaConfig(base_url=base_url, timeout=timeout)))
             elif provider_id == "openai":
-                # External inference is deliberately opt-in. The provider is not
-                # instantiated unless its secret is present in the process env.
-                api_key = os.getenv(spec.get("api_key_env", "AEGIS_OPENAI_API_KEY"), "").strip()
+                api_key = os.getenv("AEGIS_OPENAI_API_KEY", "").strip() or os.getenv("OPENAI_API_KEY", "").strip()
                 if api_key:
-                    base_url = os.getenv(
-                        spec.get("base_url_env", "AEGIS_OPENAI_URL"),
-                        spec.get("default_base_url", "https://api.openai.com"),
-                    )
-                    providers.append(
-                        OpenAICompatibleProvider(
-                            "openai",
-                            OpenAICompatibleConfig(base_url=base_url, api_key=api_key, timeout=timeout),
-                        )
-                    )
+                    providers.append(OpenAIProvider(base_url=openai_url, api_key=api_key, timeout=timeout))
         return cls(registry, providers, specs)
 
     def resolve(self, **kwargs: Any):
