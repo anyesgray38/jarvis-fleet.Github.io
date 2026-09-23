@@ -90,6 +90,8 @@ services:
     environment:
       AEGIS_ORCHESTRATOR_URL: http://127.0.0.1:8888
       AEGIS_MODEL_RUNTIME_URL: http://127.0.0.1:8891
+      SHARK_API_URL: ${SHARK_API_URL:-}
+      SHARK_ADMIN_KEY: ${SHARK_ADMIN_KEY:-}
       NODE_ENV: production
       HOSTNAME: 127.0.0.1
       NODE_OPTIONS: --max-old-space-size=512

@@ -519,6 +519,24 @@
       ]
     },
     {
+      "id": "business.shark_after_dark",
+      "provider": "anyesgray38/shark-after-dark",
+      "kind": "domain",
+      "tags": [
+        "business",
+        "bookings",
+        "revenue",
+        "security",
+        "shark-after-dark"
+      ],
+      "execution": "agent",
+      "verification": [
+        "api_authentication",
+        "financial_reconciliation",
+        "audit"
+      ]
+    },
+    {
       "id": "terminal.read",
       "provider": "aegis",
       "kind": "system",

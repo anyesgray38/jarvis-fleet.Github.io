@@ -25,13 +25,14 @@ declare global {
 
 type Message = { role: 'user' | 'assistant'; content: string }
 type Reply = { ok: boolean; request_id?: string; route?: { provider: string; model: string; reason: string; score: number; constraints: Record<string, unknown> }; timing_ms?: number; response?: { content: string }; error?: string }
+type AegisChatProps = { initialPurpose?: string; title?: string; subtitle?: string; context?: string }
 
 const purposes = ['general', 'planning', 'coding', 'research', 'security', 'audit', 'verification']
 
-export default function AegisChat() {
+export default function AegisChat({ initialPurpose = 'general', title = 'Command conversation', subtitle = 'Requests stay inside the governed local model fabric.', context }: AegisChatProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
-  const [purpose, setPurpose] = useState('general')
+  const [purpose, setPurpose] = useState(initialPurpose)
   const [busy, setBusy] = useState(false)
   const [reply, setReply] = useState<Reply | null>(null)
   const [listening, setListening] = useState(false)
@@ -110,7 +111,8 @@ export default function AegisChat() {
     setVoiceNotice(null)
     window.speechSynthesis?.cancel()
     try {
-      const response = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: next, purpose, local_only: true, allow_external: false, metadata: { interface: 'aegis-control-center' } }) })
+      const requestMessages = context ? [{ role: 'system' as const, content: context }, ...next] : next
+      const response = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: requestMessages, purpose, local_only: true, allow_external: false, metadata: { interface: 'aegis-control-center', project: context ? 'shark-after-dark' : undefined } }) })
       const data: Reply = await response.json()
       if (!response.ok || !data.ok || !data.response) throw new Error(data.error || 'AEGIS could not complete the request')
       setReply(data)
@@ -123,7 +125,7 @@ export default function AegisChat() {
 
   return <section className="chat-layout">
     <div className="card chat-card">
-      <div className="chat-head"><div><div className="eyebrow">AEGIS Intelligence</div><h2>Command conversation</h2><div className="muted">Requests stay inside the governed local model fabric.</div></div><label className="purpose">Purpose<select value={purpose} onChange={e => setPurpose(e.target.value)} disabled={busy}>{purposes.map(p => <option key={p}>{p}</option>)}</select></label></div>
+      <div className="chat-head"><div><div className="eyebrow">AEGIS Intelligence</div><h2>{title}</h2><div className="muted">{subtitle}</div></div><label className="purpose">Purpose<select value={purpose} onChange={e => setPurpose(e.target.value)} disabled={busy}>{purposes.map(p => <option key={p}>{p}</option>)}</select></label></div>
       <div className="messages">{messages.length === 0 ? <div className="chat-empty"><strong>AEGIS is ready.</strong><span>Ask a question, plan a task, inspect a system, or reason through a problem.</span></div> : messages.map((message, i) => <div className={`message ${message.role}`} key={`${message.role}-${i}`}><div className="message-label">{message.role === 'user' ? 'YOU' : 'AEGIS'}</div><div>{message.content}</div></div>)}{busy && <div className="message assistant"><div className="message-label">AEGIS</div><div className="typing">Routing → inference → evidence → verification…</div></div>}</div>
       <form className="chat-form" onSubmit={submit}><textarea value={input} onChange={e => setInput(e.target.value)} rows={3} maxLength={12000} placeholder="Give AEGIS an instruction or question…" disabled={busy} /><div className="chat-actions"><button type="button" className={`voice-button${listening ? ' active' : ''}`} onClick={toggleListening} disabled={busy || !voiceSupported} aria-label={listening ? 'Stop voice recognition' : 'Start voice recognition'}>{listening ? '■ Stop' : '🎙 Speak'}</button><button className="primary" disabled={!input.trim() || busy}>{busy ? 'Processing…' : 'Send to AEGIS'}</button></div></form>
     </div>
