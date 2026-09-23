@@ -1,0 +1,10 @@
+# Patterns
+
+## Closed-Loop Action
+PERCEIVE → ACT → OBSERVE → VERIFY → ADAPT.
+
+## Research-to-Skill
+RESEARCH → EXPERIMENT → VERIFY → DOCUMENT → PROMOTE TO SKILL.
+
+## Failure-to-Regression
+FAIL → REPRODUCE → FIX → TEST → RECORD REGRESSION PROTECTION.
