@@ -56,6 +56,36 @@ services:
       retries: 5
       start_period: 5s
 
+  knowledge-runtime:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.python
+    network_mode: host
+    command: ["python3", "knowledge_server.py"]
+    environment:
+      AEGIS_KNOWLEDGE_TOKEN: ${AEGIS_KNOWLEDGE_TOKEN:?Set AEGIS_KNOWLEDGE_TOKEN}
+      AEGIS_KNOWLEDGE_BIND: 127.0.0.1
+      AEGIS_KNOWLEDGE_PORT: 8892
+      AEGIS_KNOWLEDGE_DATA: /app/knowledge-data
+      AEGIS_KNOWLEDGE_INTERVAL_MINUTES: ${AEGIS_KNOWLEDGE_INTERVAL_MINUTES:-360}
+      AEGIS_KNOWLEDGE_WIKI_TOPICS: ${AEGIS_KNOWLEDGE_WIKI_TOPICS:-}
+      AEGIS_KNOWLEDGE_WEB_SOURCES: ${AEGIS_KNOWLEDGE_WEB_SOURCES:-}
+      FIRECRAWL_API_KEY: ${FIRECRAWL_API_KEY:-}
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - aegis-knowledge:/app/knowledge-data
+    mem_limit: 256m
+    cpus: 0.5
+    pids_limit: 64
+    init: true
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import os,urllib.request; r=urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:8892/health', headers={'Authorization':'Bearer '+os.environ['AEGIS_KNOWLEDGE_TOKEN']}), timeout=2); raise SystemExit(0 if r.status == 200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 8s
+
   localai:
     image: localai/localai:latest
     network_mode: host
@@ -117,6 +147,8 @@ services:
     environment:
       AEGIS_GATEWAY_URL: http://127.0.0.1:8877
       AEGIS_GATEWAY_TOKEN: ${AEGIS_GATEWAY_TOKEN:?Set AEGIS_GATEWAY_TOKEN}
+      AEGIS_KNOWLEDGE_URL: http://127.0.0.1:8892
+      AEGIS_KNOWLEDGE_TOKEN: ${AEGIS_KNOWLEDGE_TOKEN:?Set AEGIS_KNOWLEDGE_TOKEN}
       AEGIS_ORCHESTRATOR_URL: http://127.0.0.1:8888
       AEGIS_MODEL_RUNTIME_URL: http://127.0.0.1:8891
       SHARK_API_URL: ${SHARK_API_URL:-}
@@ -146,5 +178,6 @@ services:
 volumes:
   aegis-certs:
   aegis-evidence:
+  aegis-knowledge:
   localai-models:
   localai-data:

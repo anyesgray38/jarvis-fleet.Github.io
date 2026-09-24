@@ -22,6 +22,9 @@ This deployment keeps the AEGIS control plane private by default. The web applic
              |
              +--> fleet TLS :4444
 
+     localhost:8892
+     knowledge-runtime
+
 Persistent Docker volumes:
   aegis-evidence
   aegis-certs
@@ -74,6 +77,10 @@ docker compose --env-file deploy/.env -f deploy/compose.yml up -d web
 The guard allows port `3000` only from the configured private `/30` and loopback, while the authenticated gateway remains on loopback at `127.0.0.1:8877`. Do not enable this mode without the firewall guard. The current host's direct address is `http://100.115.92.26:3000`.
 
 The model runtime also binds to localhost. LM Studio and LocalAI default to localhost on ports `1234` and `8080` respectively. Override their URLs in `deploy/.env` if inference runs on a separate worker.
+
+The knowledge runtime binds to localhost on port `8892`. Wikipedia search works without an external key. Firecrawl web intake is enabled by setting `FIRECRAWL_API_KEY` in the untracked `deploy/.env`; the key is never sent to browser JavaScript. Configure comma-separated `AEGIS_KNOWLEDGE_WIKI_TOPICS` and `AEGIS_KNOWLEDGE_WEB_SOURCES` for startup and recurring intake.
+
+Knowledge is stored in the persistent `aegis-knowledge` volume. Active memory keeps compact distilled packets and metadata; full source text is archived separately and can only be retrieved through the authenticated knowledge service when needed.
 
 The fleet listener uses port `4444`. If host firewall rules are enabled, allow it only on the Tailscale interface for trusted AEGIS fleet nodes.
 

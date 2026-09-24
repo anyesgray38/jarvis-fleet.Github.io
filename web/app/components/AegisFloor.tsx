@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 type Worker = { name: string; role: string; status: 'active' | 'queued' | 'idle' }
 type Department = {
@@ -13,6 +13,21 @@ type Department = {
   throughput: string
   summary: string
   workers: Worker[]
+}
+type KnowledgeSnapshot = {
+  configured: boolean
+  providers: { wikipedia: boolean; firecrawl: boolean }
+  metrics: { sources_ingested: number; packets_ready: number; full_sources_archived: number; events_7d: number; words_archived: number; active_memory_mode: string }
+  sources: { id: string; title: string; provider: string; manager: string; summary: string; updated_at: string }[]
+  error: string | null
+}
+
+const initialKnowledge: KnowledgeSnapshot = {
+  configured: false,
+  providers: { wikipedia: true, firecrawl: false },
+  metrics: { sources_ingested: 0, packets_ready: 0, full_sources_archived: 0, events_7d: 0, words_archived: 0, active_memory_mode: 'distilled_packets' },
+  sources: [],
+  error: null,
 }
 
 const inboundDepartments: Department[] = [
@@ -128,18 +143,38 @@ const maintenanceDepartment: Department = {
   ],
 }
 
-const growth = [
-  { label: 'Sources mapped', value: '1,248', change: '+84 this week', width: '78%' },
-  { label: 'Distilled packets', value: '286', change: '+31 this week', width: '54%' },
-  { label: 'Reusable skills', value: '74', change: '+8 this week', width: '38%' },
-  { label: 'Agents promoted', value: '12', change: '+2 this month', width: '24%' },
-]
-
 export default function AegisFloor() {
   const [selectedId, setSelectedId] = useState('command')
   const [routed, setRouted] = useState<string[]>([])
+  const [knowledge, setKnowledge] = useState(initialKnowledge)
+  const [knowledgeError, setKnowledgeError] = useState<string | null>(null)
   const departments = [...inboundDepartments, ...outboundDepartments, maintenanceDepartment]
   const selected = useMemo(() => departments.find(department => department.id === selectedId), [departments, selectedId])
+
+  const refreshKnowledge = useCallback(async () => {
+    try {
+      const response = await fetch('/api/knowledge', { cache: 'no-store' })
+      const next = await response.json() as KnowledgeSnapshot
+      if (!response.ok) throw new Error(next.error || 'Knowledge service unavailable')
+      setKnowledge(next)
+      setKnowledgeError(null)
+    } catch (error) {
+      setKnowledgeError(error instanceof Error ? error.message : 'Knowledge service unavailable')
+    }
+  }, [])
+
+  useEffect(() => {
+    void refreshKnowledge()
+    const id = window.setInterval(() => void refreshKnowledge(), 30000)
+    return () => window.clearInterval(id)
+  }, [refreshKnowledge])
+
+  const growth = [
+    { label: 'Sources mapped', value: knowledge.metrics.sources_ingested.toLocaleString(), change: `+${knowledge.metrics.events_7d} this week`, width: progressWidth(knowledge.metrics.sources_ingested, 20) },
+    { label: 'Distilled packets', value: knowledge.metrics.packets_ready.toLocaleString(), change: `${knowledge.metrics.active_memory_mode.replace('_', ' ')}`, width: progressWidth(knowledge.metrics.packets_ready, 20) },
+    { label: 'Archived sources', value: knowledge.metrics.full_sources_archived.toLocaleString(), change: `${knowledge.metrics.words_archived.toLocaleString()} words retained`, width: progressWidth(knowledge.metrics.full_sources_archived, 20) },
+    { label: 'Learning events', value: knowledge.metrics.events_7d.toLocaleString(), change: 'last 7 days', width: progressWidth(knowledge.metrics.events_7d, 20) },
+  ]
 
   function routeRecommendation(id: string) {
     setRouted(current => current.includes(id) ? current : [...current, id])
@@ -168,6 +203,7 @@ export default function AegisFloor() {
         <div className="lane-flow"><span /> <b>RECEIVE</b><span /> <b>VERIFY</b><span /> <b>COMPRESS</b></div>
         <div className="department-stack">{inboundDepartments.map(department => <DepartmentCard key={department.id} department={department} selected={selectedId === department.id} onSelect={setSelectedId} />)}</div>
         <div className="compact-note"><span className="note-icon">↓</span><div><strong>Memory policy</strong><p>Keep a compact packet in active memory. Retrieve the full source only when a manager requests it.</p></div></div>
+        <KnowledgeIntake snapshot={knowledge} error={knowledgeError} onRefresh={refreshKnowledge} />
       </section>
 
       <section className="command-bay">
@@ -210,6 +246,39 @@ export default function AegisFloor() {
 
     <div className="station-detail"><div><div className="eyebrow">SELECTED STATION</div><h3>{selected ? selected.name : 'Aegis central command'}</h3><p>{selected ? selected.summary : 'Select any station to inspect its manager, workers, and operating responsibility.'}</p></div><div className="station-detail-meta">{selected ? <><span><strong>{selected.manager}</strong> · {selected.managerRole}</span><span>{selected.workers.length} workers reporting</span><span className="station-detail-status"><i className="dot" /> {selected.status}</span></> : <span>Command owns the whole floor.</span>}</div></div>
   </section>
+}
+
+function progressWidth(value: number, target: number) {
+  return `${Math.max(value ? 8 : 3, Math.min(100, Math.round((value / target) * 100)))}%`
+}
+
+function KnowledgeIntake({ snapshot, error, onRefresh }: { snapshot: KnowledgeSnapshot; error: string | null; onRefresh: () => Promise<void> }) {
+  const [query, setQuery] = useState('agentic artificial intelligence')
+  const [url, setUrl] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
+
+  async function ingest(kind: 'wiki' | 'web') {
+    const value = kind === 'wiki' ? query.trim() : url.trim()
+    if (!value || busy) return
+    setBusy(true)
+    setMessage(null)
+    try {
+      const response = await fetch('/api/knowledge', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(kind === 'wiki' ? { kind, query: value, manager: 'Scribe' } : { kind, url: value, manager: 'Atlas' }) })
+      const data = await response.json() as { ok?: boolean; error?: string }
+      if (!response.ok || !data.ok) throw new Error(data.error || 'Intake failed')
+      setMessage(kind === 'wiki' ? 'Reference packet added to Memory Forge.' : 'Web source archived and distilled.')
+      if (kind === 'web') setUrl('')
+      await onRefresh()
+    } catch (intakeError) {
+      setMessage(intakeError instanceof Error ? intakeError.message : 'Intake failed')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const latest = snapshot.sources[0]
+  return <div className="knowledge-intake"><div className="knowledge-intake-head"><div><div className="eyebrow">LIVE INTAKE CONSOLE</div><strong>Feed the inbound lane</strong></div><span className={snapshot.providers.firecrawl ? 'provider-state ready' : 'provider-state'}>{snapshot.providers.firecrawl ? 'FIRECRAWL READY' : 'WIKI READY'}</span></div><label>Wiki search<input value={query} onChange={event => setQuery(event.target.value)} placeholder="Topic or question" disabled={busy} /></label><button type="button" className="intake-button" onClick={() => void ingest('wiki')} disabled={!query.trim() || busy}>{busy ? 'Processing…' : 'Search + distill'}</button><label>Web page<input value={url} onChange={event => setUrl(event.target.value)} placeholder="https://…" disabled={busy || !snapshot.providers.firecrawl} /></label><button type="button" className="intake-button secondary" onClick={() => void ingest('web')} disabled={!url.trim() || busy || !snapshot.providers.firecrawl}>{snapshot.providers.firecrawl ? 'Scrape with Firecrawl' : 'Add FIRECRAWL_API_KEY'}</button>{message && <p className={message.includes('added') || message.includes('archived') ? 'intake-message success' : 'intake-message'}>{message}</p>}{error && <p className="intake-message">{error}</p>}<small>{latest ? `Latest packet: ${latest.title}` : 'No packets yet. Start with a Wiki search.'}</small></div>
 }
 
 function FloorKpi({ label, value, note }: { label: string; value: string; note: string }) {
