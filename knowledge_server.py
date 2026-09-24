@@ -122,11 +122,19 @@ class FirecrawlMcpAdapter:
             "url": FIRECRAWL_MCP_URL,
             "headers": headers,
         })
-        decision = self.fabric.discover("mcp.firecrawl", timeout=25.0)
+        try:
+            decision = self.fabric.discover("mcp.firecrawl", timeout=25.0)
+        except Exception as exc:
+            self.error = str(exc)
+            raise
         if not decision.approved:
-            raise RuntimeError(f"Firecrawl MCP rejected by Aegis admission: {', '.join(decision.reasons)}")
+            self.error = f"Firecrawl MCP rejected by Aegis admission: {', '.join(decision.reasons)}"
+            raise RuntimeError(self.error)
         self.ready = True
         self.error = None
+
+    def status(self) -> dict:
+        return {"configured": bool(FIRECRAWL_MCP_URL), "admitted": self.ready, "error": self.error}
 
     def scrape(self, url: str) -> dict:
         self.ensure()
@@ -300,9 +308,16 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         if not self.guard():
             return
-        path = self.path.split("?", 1)[0]
+        path, _, query = self.path.partition("?")
         if path == "/health":
-            self.send_json(200, {"ok": True, "service": "aegis-knowledge-runtime", "providers": {"wikipedia": True, "firecrawl": bool(FIRECRAWL_MCP_URL), "firecrawl_authenticated": bool(FIRECRAWL_KEY or FIRECRAWL_OAUTH_TOKEN)}})
+            provider_status = FIRECRAWL.status()
+            if "deep=1" in query.split("&") and FIRECRAWL_MCP_URL:
+                try:
+                    FIRECRAWL.ensure()
+                except Exception:
+                    pass
+                provider_status = FIRECRAWL.status()
+            self.send_json(200, {"ok": True, "service": "aegis-knowledge-runtime", "providers": {"wikipedia": True, "firecrawl": bool(FIRECRAWL_MCP_URL), "firecrawl_authenticated": bool(FIRECRAWL_KEY or FIRECRAWL_OAUTH_TOKEN)}, "firecrawl_mcp": provider_status})
         elif path == "/snapshot":
             self.send_json(200, STORE.snapshot())
         elif path.startswith("/source/"):

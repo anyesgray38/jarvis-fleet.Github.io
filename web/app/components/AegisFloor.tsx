@@ -21,6 +21,8 @@ type KnowledgeSnapshot = {
   sources: { id: string; title: string; provider: string; manager: string; summary: string; updated_at: string }[]
   error: string | null
 }
+type AuditCheck = { id: string; name: string; owner: string; status: 'PASS' | 'FAIL' | 'WARN'; detail: string; evidence: string; duration_ms: number }
+type AuditReport = { run_id: string; started_at: string; completed_at: string; status: 'PASS' | 'DEGRADED' | 'FAIL'; summary: { passed: number; failed: number; warnings: number; checks: number }; checks: AuditCheck[]; recommendations: { id: string; title: string; owner: string; priority: 'HIGH' | 'MEDIUM'; reason: string }[] }
 
 const initialKnowledge: KnowledgeSnapshot = {
   configured: false,
@@ -145,9 +147,11 @@ const maintenanceDepartment: Department = {
 
 export default function AegisFloor() {
   const [selectedId, setSelectedId] = useState('command')
-  const [routed, setRouted] = useState<string[]>([])
   const [knowledge, setKnowledge] = useState(initialKnowledge)
   const [knowledgeError, setKnowledgeError] = useState<string | null>(null)
+  const [audit, setAudit] = useState<AuditReport | null>(null)
+  const [auditBusy, setAuditBusy] = useState(false)
+  const [auditError, setAuditError] = useState<string | null>(null)
   const departments = [...inboundDepartments, ...outboundDepartments, maintenanceDepartment]
   const selected = useMemo(() => departments.find(department => department.id === selectedId), [departments, selectedId])
 
@@ -169,16 +173,33 @@ export default function AegisFloor() {
     return () => window.clearInterval(id)
   }, [refreshKnowledge])
 
+  const runAudit = useCallback(async () => {
+    setAuditBusy(true)
+    try {
+      const response = await fetch('/api/audit', { method: 'POST', cache: 'no-store' })
+      const data = await response.json() as { report?: AuditReport; error?: string }
+      if (!data.report) throw new Error(data.error || 'Audit did not return a report')
+      setAudit(data.report)
+      setAuditError(null)
+    } catch (error) {
+      setAuditError(error instanceof Error ? error.message : 'Audit unavailable')
+    } finally {
+      setAuditBusy(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    void runAudit()
+    const id = window.setInterval(() => { if (document.visibilityState === 'visible') void runAudit() }, 300000)
+    return () => window.clearInterval(id)
+  }, [runAudit])
+
   const growth = [
     { label: 'Sources mapped', value: knowledge.metrics.sources_ingested.toLocaleString(), change: `+${knowledge.metrics.events_7d} this week`, width: progressWidth(knowledge.metrics.sources_ingested, 20) },
     { label: 'Distilled packets', value: knowledge.metrics.packets_ready.toLocaleString(), change: `${knowledge.metrics.active_memory_mode.replace('_', ' ')}`, width: progressWidth(knowledge.metrics.packets_ready, 20) },
     { label: 'Archived sources', value: knowledge.metrics.full_sources_archived.toLocaleString(), change: `${knowledge.metrics.words_archived.toLocaleString()} words retained`, width: progressWidth(knowledge.metrics.full_sources_archived, 20) },
     { label: 'Learning events', value: knowledge.metrics.events_7d.toLocaleString(), change: 'last 7 days', width: progressWidth(knowledge.metrics.events_7d, 20) },
   ]
-
-  function routeRecommendation(id: string) {
-    setRouted(current => current.includes(id) ? current : [...current, id])
-  }
 
   return <section className="floor-page">
     <div className="floor-intro">
@@ -239,12 +260,20 @@ export default function AegisFloor() {
       <div className="growth-metrics">{growth.map(item => <div className="growth-metric" key={item.label}><div className="growth-metric-top"><span>{item.label}</span><strong>{item.value}</strong></div><div className="growth-bar"><i style={{ width: item.width }} /></div><small>{item.change}</small></div>)}</div>
     </section>
 
-    <section className="maintenance-bay">
-      <div className="maintenance-head"><div><div className="eyebrow">MAINTENANCE DEPARTMENT · AUDIT BAY</div><h2>Keep the floor healthy.</h2><p className="muted large">Sentinel audits drift, security, dependencies, and recovery paths, then routes recommendations to the manager who owns the change.</p></div><div className="maintenance-badge"><i className="dot" /> 4 recommendations ready</div></div>
-      <div className="maintenance-grid"><DepartmentCard department={maintenanceDepartment} selected={selectedId === maintenanceDepartment.id} onSelect={setSelectedId} /><div className="recommendation-list"><Recommendation title="Upgrade web runtime dependencies" owner="Forge · Aegis Codebase" priority="HIGH" id="runtime" routed={routed.includes('runtime')} onRoute={routeRecommendation} /><Recommendation title="Add source freshness checks" owner="Scribe · Wiki & Reference" priority="MEDIUM" id="freshness" routed={routed.includes('freshness')} onRoute={routeRecommendation} /><Recommendation title="Run disaster-recovery drill" owner="Sentinel · Maintenance" priority="MEDIUM" id="recovery" routed={routed.includes('recovery')} onRoute={routeRecommendation} /></div></div>
-    </section>
+    <AuditBay audit={audit} busy={auditBusy} error={auditError} onRun={runAudit} department={maintenanceDepartment} selected={selectedId === maintenanceDepartment.id} onSelect={setSelectedId} />
 
     <div className="station-detail"><div><div className="eyebrow">SELECTED STATION</div><h3>{selected ? selected.name : 'Aegis central command'}</h3><p>{selected ? selected.summary : 'Select any station to inspect its manager, workers, and operating responsibility.'}</p></div><div className="station-detail-meta">{selected ? <><span><strong>{selected.manager}</strong> · {selected.managerRole}</span><span>{selected.workers.length} workers reporting</span><span className="station-detail-status"><i className="dot" /> {selected.status}</span></> : <span>Command owns the whole floor.</span>}</div></div>
+  </section>
+}
+
+function AuditBay({ audit, busy, error, onRun, department, selected, onSelect }: { audit: AuditReport | null; busy: boolean; error: string | null; onRun: () => Promise<void>; department: Department; selected: boolean; onSelect: (id: string) => void }) {
+  const badge = audit ? `${audit.status} · ${audit.summary.passed}/${audit.summary.checks} passed` : 'NOT RUN'
+  return <section className="maintenance-bay">
+    <div className="maintenance-head"><div><div className="eyebrow">MAINTENANCE DEPARTMENT · AUDIT BAY</div><h2>Evidence before recommendations.</h2><p className="muted large">Sentinel runs live probes against the private services, MCP admission path, freshness, and authentication boundaries. A recommendation appears only when a check fails or warns.</p></div><div className={`maintenance-badge audit-${audit?.status?.toLowerCase() || 'none'}`}><i className="dot" /> {badge}</div></div>
+    <div className="audit-toolbar"><span className="muted">{audit ? `Run ${audit.run_id} · completed ${new Date(audit.completed_at).toLocaleString()}` : 'No completed audit run.'}</span><button type="button" className="intake-button secondary" onClick={() => void onRun()} disabled={busy}>{busy ? 'Auditing…' : 'Run live audit'}</button></div>
+    {error && <p className="intake-message">{error}</p>}
+    <div className="maintenance-grid"><DepartmentCard department={department} selected={selected} onSelect={onSelect} /><div className="audit-results"><div className="audit-summary"><span><b>{audit?.summary.passed ?? 0}</b> passed</span><span><b>{audit?.summary.failed ?? 0}</b> failed</span><span><b>{audit?.summary.warnings ?? 0}</b> warnings</span></div>{audit ? audit.checks.map(check => <div className="audit-check" key={check.id}><div className={`audit-status ${check.status.toLowerCase()}`}>{check.status}</div><div className="audit-check-copy"><strong>{check.name}</strong><span>{check.detail}</span><small>{check.owner} · {check.duration_ms}ms · {check.evidence}</small></div></div>) : <div className="empty">Run the audit to collect evidence.</div>}</div></div>
+    <div className="recommendation-list audit-recommendations">{audit?.recommendations.length ? audit.recommendations.map(item => <div className="recommendation" key={item.id}><div className="recommendation-mark">{item.priority === 'HIGH' ? '!' : '↗'}</div><div className="recommendation-content"><strong>{item.title}</strong><span>{item.owner} · {item.reason}</span></div><span className="badge">EVIDENCE-BASED</span></div>) : <div className="audit-clear">{audit ? 'No recommendations generated from this run.' : 'Recommendations will appear only after the first run.'}</div>}</div>
   </section>
 }
 
@@ -299,8 +328,4 @@ function DepartmentCard({ department, selected, onSelect }: { department: Depart
 
 function QueueItem({ label, task, status }: { label: string; task: string; status: string }) {
   return <div className="queue-item"><div><strong>{label}</strong><span>{task}</span></div><em>{status}</em></div>
-}
-
-function Recommendation({ title, owner, priority, id, routed, onRoute }: { title: string; owner: string; priority: string; id: string; routed: boolean; onRoute: (id: string) => void }) {
-  return <div className="recommendation"><div className="recommendation-mark">{priority === 'HIGH' ? '!' : '↗'}</div><div className="recommendation-content"><strong>{title}</strong><span>{owner}</span></div><button type="button" onClick={() => onRoute(id)} disabled={routed}>{routed ? 'ROUTED' : 'SEND TO MANAGER'}</button></div>
 }
