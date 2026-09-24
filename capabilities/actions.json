@@ -69,6 +69,20 @@
       "execution": "agent",
       "status": "policy_gated",
       "verification": ["deployment_state", "health_check", "rollback_ready"]
+    },
+    {
+      "id": "business.scan",
+      "risk": "external",
+      "execution": "agent",
+      "status": "policy_gated",
+      "verification": ["location_evidence", "source_provenance", "uncertainty", "persistence"]
+    },
+    {
+      "id": "business.website_demo",
+      "risk": "write",
+      "execution": "agent",
+      "status": "policy_gated",
+      "verification": ["verified_facts", "path_containment", "build_validation", "browser_check"]
     }
   ]
 }

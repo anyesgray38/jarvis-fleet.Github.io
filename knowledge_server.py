@@ -18,8 +18,7 @@ from pathlib import Path
 from urllib.parse import quote, urlencode
 from urllib.request import Request, urlopen
 
-from mcp.admission import AdmissionController
-from mcp.fabric import McpCapabilityFabric
+from mcp.firecrawl import FirecrawlMcpAdapter
 
 BIND = os.environ.get("AEGIS_KNOWLEDGE_BIND", "127.0.0.1")
 PORT = int(os.environ.get("AEGIS_KNOWLEDGE_PORT", "8892"))
@@ -100,67 +99,7 @@ def wiki_source(query: str) -> dict:
     }
 
 
-class FirecrawlMcpAdapter:
-    def __init__(self) -> None:
-        self.fabric = McpCapabilityFabric(admission=AdmissionController(max_risk_score=35.0))
-        self.ready = False
-        self.error: str | None = None
-
-    def ensure(self) -> None:
-        if self.ready:
-            return
-        headers = {}
-        credential = FIRECRAWL_OAUTH_TOKEN or FIRECRAWL_KEY
-        if credential:
-            headers["Authorization"] = f"Bearer {credential}"
-        self.fabric.register({
-            "id": "mcp.firecrawl",
-            "name": "Firecrawl MCP Server",
-            "repository": "https://github.com/firecrawl/firecrawl-mcp-server",
-            "category": "Research & Web Intelligence",
-            "transport": "streamable_http",
-            "url": FIRECRAWL_MCP_URL,
-            "headers": headers,
-        })
-        try:
-            decision = self.fabric.discover("mcp.firecrawl", timeout=25.0)
-        except Exception as exc:
-            self.error = str(exc)
-            raise
-        if not decision.approved:
-            self.error = f"Firecrawl MCP rejected by Aegis admission: {', '.join(decision.reasons)}"
-            raise RuntimeError(self.error)
-        self.ready = True
-        self.error = None
-
-    def status(self) -> dict:
-        return {"configured": bool(FIRECRAWL_MCP_URL), "admitted": self.ready, "error": self.error}
-
-    def scrape(self, url: str) -> dict:
-        self.ensure()
-        result = self.fabric.invoke("mcp.firecrawl", "firecrawl_scrape", {
-            "url": url,
-            "formats": ["markdown"],
-            "onlyMainContent": True,
-        }, timeout=45.0)
-        text_items = [item.get("text", "") for item in result.get("content", []) if isinstance(item, dict) and item.get("type") == "text"]
-        raw = "\n".join(item for item in text_items if item)
-        try:
-            data = json.loads(raw) if raw else {}
-        except json.JSONDecodeError:
-            data = {"markdown": raw}
-        content = data.get("markdown") or data.get("content") or raw
-        if not content:
-            raise RuntimeError("Firecrawl MCP returned no markdown content")
-        return {
-            "title": data.get("metadata", {}).get("title") or url,
-            "url": url,
-            "content": content,
-            "provider": "firecrawl-mcp",
-        }
-
-
-FIRECRAWL = FirecrawlMcpAdapter()
+FIRECRAWL = FirecrawlMcpAdapter(url=FIRECRAWL_MCP_URL, oauth_token=FIRECRAWL_OAUTH_TOKEN, api_key=FIRECRAWL_KEY)
 
 
 def firecrawl_source(url: str) -> dict:

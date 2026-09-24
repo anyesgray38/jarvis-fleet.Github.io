@@ -88,6 +88,36 @@ services:
       retries: 5
       start_period: 8s
 
+  prospecting-runtime:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.python
+    network_mode: host
+    command: ["python3", "prospecting_server.py"]
+    environment:
+      AEGIS_PROSPECT_TOKEN: ${AEGIS_PROSPECT_TOKEN:?Set AEGIS_PROSPECT_TOKEN}
+      AEGIS_PROSPECT_BIND: 127.0.0.1
+      AEGIS_PROSPECT_PORT: 8893
+      AEGIS_PROSPECT_DB: /app/prospect-data/prospects.db
+      AEGIS_PROSPECT_SOURCE_URLS: ${AEGIS_PROSPECT_SOURCE_URLS:-}
+      FIRECRAWL_API_KEY: ${FIRECRAWL_API_KEY:-}
+      FIRECRAWL_OAUTH_TOKEN: ${FIRECRAWL_OAUTH_TOKEN:-}
+      FIRECRAWL_MCP_URL: ${FIRECRAWL_MCP_URL:-https://mcp.firecrawl.dev/v2/mcp}
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - aegis-prospecting:/app/prospect-data
+    mem_limit: 384m
+    cpus: 0.75
+    pids_limit: 96
+    init: true
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; r=urllib.request.urlopen('http://127.0.0.1:8893/health', timeout=3); raise SystemExit(0 if r.status == 200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 8s
+
   localai:
     image: localai/localai:latest
     network_mode: host
@@ -151,6 +181,8 @@ services:
       AEGIS_GATEWAY_TOKEN: ${AEGIS_GATEWAY_TOKEN:?Set AEGIS_GATEWAY_TOKEN}
       AEGIS_KNOWLEDGE_URL: http://127.0.0.1:8892
       AEGIS_KNOWLEDGE_TOKEN: ${AEGIS_KNOWLEDGE_TOKEN:?Set AEGIS_KNOWLEDGE_TOKEN}
+      AEGIS_PROSPECT_URL: http://127.0.0.1:8893
+      AEGIS_PROSPECT_TOKEN: ${AEGIS_PROSPECT_TOKEN:?Set AEGIS_PROSPECT_TOKEN}
       AEGIS_ORCHESTRATOR_URL: http://127.0.0.1:8888
       AEGIS_MODEL_RUNTIME_URL: http://127.0.0.1:8891
       SHARK_API_URL: ${SHARK_API_URL:-}
@@ -181,5 +213,6 @@ volumes:
   aegis-certs:
   aegis-evidence:
   aegis-knowledge:
+  aegis-prospecting:
   localai-models:
   localai-data:

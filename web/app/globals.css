@@ -357,5 +357,35 @@ h1, h2, h3, p { margin-top: 0; }
 .intake-button.secondary { border-color: #38536d; background: #172b3d; color: var(--blue); }
 .intake-button:disabled { cursor: not-allowed; opacity: .48; }
 .intake-message { margin: 3px 0 0; color: var(--warning); font-size: 10px; line-height: 1.4; }
+.prospecting-page { display: grid; gap: 18px; }
+.prospecting-intro { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
+.prospecting-intro h1 { max-width: 760px; margin: 8px 0; font-size: clamp(32px, 5vw, 58px); }
+.prospecting-intro .floor-lede { max-width: 760px; }
+.prospecting-state { display: grid; gap: 5px; min-width: 190px; border: 1px solid #29423f; border-radius: 12px; background: #10221f; color: var(--accent); padding: 13px; font-size: 10px; }
+.prospecting-state .dot { display: inline-block; margin-right: 5px; }
+.prospecting-state span { color: var(--muted); }
+.prospecting-form { display: grid; grid-template-columns: minmax(190px, 1.5fr) minmax(160px, 1fr) 130px 120px auto; align-items: end; gap: 9px; border: 1px solid #29423f; border-radius: 12px; background: linear-gradient(145deg,#10221f,#101923); padding: 14px; }
+.prospecting-form label { display: grid; gap: 5px; color: var(--muted); font-size: 9px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+.prospecting-form input { width: 100%; border: 1px solid #29423f; border-radius: 7px; outline: none; background: #091411; color: var(--text); padding: 9px 10px; font-size: 11px; }
+.prospecting-form input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(133,217,176,.12); }
+.optional { color: #71869a; font-weight: 500; }
+.prospecting-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.prospect-metric { display: grid; gap: 5px; }
+.prospect-metric strong { font-size: 28px; letter-spacing: -.04em; }
+.prospect-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.prospect-card { border: 1px solid #2b3b44; border-radius: 14px; background: #101923; padding: 17px; }
+.prospect-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+.prospect-card h2 { margin: 5px 0; font-size: 18px; letter-spacing: -.035em; }
+.prospect-card p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.45; }
+.opportunity-score { display: grid; min-width: 82px; border: 1px solid #315843; border-radius: 10px; background: #14251d; color: var(--accent); padding: 7px; text-align: right; }
+.opportunity-score strong { font-size: 25px; line-height: 1; }
+.opportunity-score span { margin-top: 4px; color: var(--muted); font-size: 8px; }
+.prospect-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 13px; }
+.prospect-tags span { border: 1px solid #334959; border-radius: 999px; color: var(--blue); padding: 4px 7px; font-size: 8px; font-weight: 800; text-transform: uppercase; }
+.prospect-reasons { min-height: 76px; margin-top: 13px; border-top: 1px solid #253746; padding-top: 10px; }
+.prospect-reasons p { margin: 4px 0; color: var(--text-soft); font-size: 10px; }
+.prospect-footer { display: flex; justify-content: space-between; gap: 10px; margin-top: 12px; color: var(--muted); font-size: 9px; }
+@media (max-width: 920px) { .prospecting-intro { flex-direction: column; } .prospecting-form { grid-template-columns: repeat(2, minmax(0, 1fr)); } .prospecting-form label:first-child { grid-column: span 2; } .prospecting-form button { grid-column: span 2; } .prospect-list { grid-template-columns: 1fr; } }
+@media (max-width: 560px) { .prospecting-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } .prospecting-form { grid-template-columns: 1fr; } .prospecting-form label:first-child, .prospecting-form button { grid-column: auto; } }
 .intake-message.success { color: var(--accent); }
 .knowledge-intake > small { color: var(--faint); font-size: 9px; line-height: 1.4; }

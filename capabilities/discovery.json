@@ -2,6 +2,30 @@
   "version": 1,
   "capabilities": [
     {
+      "id": "business.discovery",
+      "kind": "business",
+      "description": "Discover and normalize public business candidates for a geographic target with corridor evidence",
+      "execution": "agent",
+      "risk": "external_research",
+      "verification": ["location_evidence", "deduplication", "source_provenance"]
+    },
+    {
+      "id": "business.website_audit",
+      "kind": "business",
+      "description": "Audit publicly reachable business websites and social presence without inventing missing facts",
+      "execution": "agent",
+      "risk": "external_research",
+      "verification": ["http_evidence", "confidence", "uncertainty"]
+    },
+    {
+      "id": "business.opportunity_score",
+      "kind": "business",
+      "description": "Produce an explainable digital-opportunity score from observable public gaps",
+      "execution": "internal",
+      "risk": "analysis",
+      "verification": ["determinism", "reason_codes", "no_commercial_claims"]
+    },
+    {
       "id": "research.hypothesis_generation",
       "kind": "research",
       "description": "Generate explicit, testable hypotheses with null hypotheses and falsification criteria",

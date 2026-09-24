@@ -32,6 +32,26 @@
       ]
     },
     {
+      "id": "core.business_prospecting",
+      "provider": "aegis",
+      "kind": "core",
+      "tags": [
+        "business",
+        "prospecting",
+        "research",
+        "web",
+        "evidence"
+      ],
+      "execution": "agent",
+      "verification": [
+        "location_evidence",
+        "deduplication",
+        "website_audit",
+        "explainable_score",
+        "persistence"
+      ]
+    },
+    {
       "id": "core.software_engineering",
       "provider": "aegis",
       "kind": "core",

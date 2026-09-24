@@ -37,6 +37,16 @@ if ! grep -q '^AEGIS_KNOWLEDGE_TOKEN=' deploy/.env \
   fi
 fi
 
+if ! grep -q '^AEGIS_PROSPECT_TOKEN=' deploy/.env \
+  || grep -Eq '^AEGIS_PROSPECT_TOKEN=(|replace-with-a-prospecting-runtime-secret)$' deploy/.env; then
+  prospect_token="$(dd if=/dev/urandom bs=32 count=1 2>/dev/null | od -An -tx1 | tr -d ' \\n')"
+  if grep -q '^AEGIS_PROSPECT_TOKEN=' deploy/.env; then
+    sed -i "s/^AEGIS_PROSPECT_TOKEN=.*/AEGIS_PROSPECT_TOKEN=${prospect_token}/" deploy/.env
+  else
+    printf '\nAEGIS_PROSPECT_TOKEN=%s\n' "$prospect_token" >> deploy/.env
+  fi
+fi
+
 # Never accept the checked-in template value as a real credential.
 if ! grep -q '^AEGIS_FLEET_SECRET=' deploy/.env \
   || grep -Eq '^AEGIS_FLEET_SECRET=(|replace-with-a-long-random-secret)$' deploy/.env; then

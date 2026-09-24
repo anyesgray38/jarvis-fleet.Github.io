@@ -6,12 +6,13 @@ import PentestChat from './components/PentestChat'
 import HomelabDashboard from './components/HomelabDashboard'
 import SharkDashboard from './components/SharkDashboard'
 import AegisFloor from './components/AegisFloor'
+import ProspectingDashboard from './components/ProspectingDashboard'
 
 const navGroups = [
   { label: 'Command', items: ['Aegis Floor'] },
   { label: 'Workspace', items: ['Homelab', 'Shark Ops', 'Overview', 'Chat'] },
   { label: 'Operations', items: ['Tasks', 'Agents', 'Verification', 'Evidence'] },
-  { label: 'Intelligence', items: ['MCP Capabilities', 'Models', 'Memory'] },
+  { label: 'Intelligence', items: ['MCP Capabilities', 'Models', 'Memory', 'Prospecting'] },
   { label: 'Security', items: ['Security', 'Pentest Chat', 'Pentest', 'Settings'] },
 ]
 const pipeline = ['Plan', 'Security', 'Dispatch', 'Execute', 'Verify', 'Audit', 'Publish']
@@ -75,6 +76,7 @@ export default function Home() {
   }
   return <div className="shell"><aside className="sidebar"><div className="brand"><div className="brand-mark">A</div><div><div className="brand-name">AEGIS</div><div className="brand-caption">CONTROL CENTER</div></div></div><div className="sidebar-intro">Your governed operator workspace.</div><nav className="nav" aria-label="AEGIS sections">{navGroups.map(group => <div className="nav-group" key={group.label}><div className="nav-label">{group.label}</div>{group.items.map(n => <button type="button" key={n} className={active === n ? 'active' : ''} aria-current={active === n ? 'page' : undefined} onClick={() => { setActive(n); setActionMessage(null) }}><span>{n}</span>{active === n && <span className="nav-current" aria-hidden="true">›</span>}</button>)}</div>)}</nav><div className="sidebar-bottom"><div className="sidebar-status"><i className={data.connected ? 'dot' : 'dot off'} />{data.connected ? 'Systems connected' : 'Gateway offline'}</div><div className="footer">CONTROL PLANE v1.1<br />Private Tailscale workspace</div></div></aside><main className="main"><header className="top"><div><div className="eyebrow">{active} <span className="crumb">/ AEGIS workspace</span></div><div className="title">AEGIS Control Center</div><div className="muted">A clear view of your systems, operations, and next actions.</div></div><div className="status" role="status" aria-live="polite"><i className={data.connected ? 'dot' : 'dot off'} /><span>{data.connected ? 'Systems connected' : 'Gateway disconnected'}</span><button type="button" className="refresh" onClick={() => void refresh()} disabled={refreshing}>{refreshing ? 'Syncing…' : 'Refresh'}</button></div></header>{!data.connected && <div className="notice" role="alert">{data.error || 'Connect the dashboard to the authenticated AEGIS gateway on the Linux host.'}</div>}{actionMessage && <div className={actionMessage.includes('accepted') ? 'notice success' : 'notice'}>{actionMessage}</div>}
       {active === 'Aegis Floor' && <AegisFloor />}
+      {active === 'Prospecting' && <ProspectingDashboard />}
       {active === 'Homelab' && <HomelabDashboard />}
       {active === 'Shark Ops' && <SharkDashboard />}
       {active === 'Overview' && <Overview data={data} activeJobs={activeJobs} liveAgents={liveAgents} recentJobs={recentJobs} loading={loading} />}

@@ -60,6 +60,20 @@ def build_parser()->argparse.ArgumentParser:
     st=ps.add_parser("status",help="show a project job or queued jobs");st.add_argument("job_id",nargs="?");st.add_argument("--status",choices=STATUSES);st.add_argument("--db",default=os.getenv("JARVIS_JOB_DB",".jarvis/jobs.db"))
     lg=ps.add_parser("logs",help="show project job events");lg.add_argument("job_id");lg.add_argument("--limit",type=int,default=100);lg.add_argument("--db",default=os.getenv("JARVIS_JOB_DB",".jarvis/jobs.db"))
     ca=ps.add_parser("cancel",help="cancel a queued or running project job");ca.add_argument("job_id");ca.add_argument("--db",default=os.getenv("JARVIS_JOB_DB",".jarvis/jobs.db"))
+    scan=sub.add_parser("business-scan",help="discover and research businesses in a public geographic target")
+    scan.add_argument("target")
+    scan.add_argument("--category",default="")
+    scan.add_argument("--radius",dest="radius_miles",type=float)
+    scan.add_argument("--max-results",type=int,default=30)
+    scan.add_argument("--generate",type=int,default=0,help="generate verified demo pages for up to N high-opportunity prospects")
+    scan.add_argument("--output",dest="output_root",default=".jarvis/prospects");scan.add_argument("--source-url",action="append",default=[])
+    prospect=sub.add_parser("prospect",help="inspect or act on stored business prospects")
+    pp=prospect.add_subparsers(dest="prospect_command")
+    pscan=pp.add_parser("scan",help="alias for business-scan")
+    pscan.add_argument("target");pscan.add_argument("--category",default="");pscan.add_argument("--radius",dest="radius_miles",type=float);pscan.add_argument("--max-results",type=int,default=30);pscan.add_argument("--generate",type=int,default=0);pscan.add_argument("--output",dest="output_root",default=".jarvis/prospects");pscan.add_argument("--source-url",action="append",default=[])
+    plist=pp.add_parser("list",help="list stored prospects");plist.add_argument("--min-score",type=int,default=0);plist.add_argument("--limit",type=int,default=100)
+    pshow=pp.add_parser("show",help="show one stored prospect");pshow.add_argument("business_id")
+    pbuild=pp.add_parser("build",help="generate and verify one prospect demonstration");pbuild.add_argument("business_id");pbuild.add_argument("--output",dest="output_root",default=".jarvis/prospects")
     return p
 
 def _emit(args,payload,text=None):
@@ -112,6 +126,28 @@ def _providers():
     data=_load_json(DEFAULT_PROVIDERS);return data.get("providers",[])
 def _memory():
     return {"layers":["personal","project","procedural","knowledge","evidence"],"storage":"control-plane memory interface","status":"ready"}
+def _business_scan(args):
+    from prospecting.models import ScanRequest
+    from prospecting.store import ProspectStore
+    from prospecting.workflow import BusinessProspectingAgent
+    request=ScanRequest(target=args.target,category=args.category,radius_miles=args.radius_miles,max_results=max(1,min(100,args.max_results)),generate_limit=max(0,min(10,args.generate)),output_root=args.output_root,source_urls=tuple(args.source_url))
+    result=BusinessProspectingAgent(store=ProspectStore(os.getenv("AEGIS_PROSPECT_DB",".jarvis/prospects.db"))).scan(request)
+    return _emit(args,result.to_dict(),text=json.dumps(result.summary(),indent=2))
+def _prospect(args):
+    from prospecting.store import ProspectStore
+    store=ProspectStore(os.getenv("AEGIS_PROSPECT_DB",".jarvis/prospects.db"))
+    if args.prospect_command=="scan":
+        return _business_scan(args)
+    if args.prospect_command=="list":
+        return _emit(args,[item.to_dict() for item in store.list_businesses(min_score=args.min_score,limit=args.limit)])
+    if args.prospect_command=="show":
+        item=store.get_business(args.business_id)
+        if not item:raise ValueError(f"business not found: {args.business_id}")
+        return _emit(args,item.to_dict())
+    if args.prospect_command=="build":
+        from prospecting.workflow import BusinessProspectingAgent
+        return _emit(args,BusinessProspectingAgent(store=store).generate_business_demo(args.business_id,output_root=args.output_root))
+    raise ValueError("prospect command is required")
 def _run(args):
     e=_envelope(args);task={"task_id":e.task_id,"objective":e.objective,"capability":e.capability,"trust_required":int(e.trust_required),"input":e.input,"verification":getattr(args,"verification",{})}
     if not args.execute:return _emit(args,task,text=f"DRY RUN\nTask: {e.task_id}\nCapability: {e.capability}\nUse --execute to dispatch through AEGIS.")
@@ -165,6 +201,8 @@ def execute(args):
     if args.command in {None,"help"}:print(BANNER);build_parser().print_help();return 0
     if args.command=="status":return _emit(args,_status(args))
     if args.command=="project":return _project(args)
+    if args.command=="business-scan":return _business_scan(args)
+    if args.command=="prospect":return _prospect(args)
     if args.command=="safety":return _safety(args)
     if args.command=="toggle":args.safety_command="enable" if args.state=="on" else "disable";return _safety(args)
     if args.command=="capabilities":return _emit(args,_caps(args))
