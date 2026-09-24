@@ -28,6 +28,7 @@ const initialKnowledge: KnowledgeSnapshot = {
 export default function AegisFloor() {
   const [knowledge, setKnowledge] = useState(initialKnowledge)
   const [error, setError] = useState<string | null>(null)
+  const [loaded, setLoaded] = useState(false)
 
   const refresh = useCallback(async () => {
     try {
@@ -35,6 +36,7 @@ export default function AegisFloor() {
       const next = await response.json() as KnowledgeSnapshot
       if (!response.ok) throw new Error(next.error || 'Knowledge service unavailable')
       setKnowledge(next)
+      setLoaded(true)
       setError(null)
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Knowledge service unavailable')
@@ -70,10 +72,10 @@ export default function AegisFloor() {
         <button type="button" className="intake-button secondary" onClick={() => void refresh()}>Refresh</button>
       </div>
       <div className="floor-kpis live-kpis">
-        <LiveKpi label="Sources ingested" value={knowledge.metrics.sources_ingested} />
-        <LiveKpi label="Packets ready" value={knowledge.metrics.packets_ready} />
-        <LiveKpi label="Archived sources" value={knowledge.metrics.full_sources_archived} />
-        <LiveKpi label="Learning events · 7d" value={knowledge.metrics.events_7d} />
+        <LiveKpi label="Sources ingested" value={loaded ? knowledge.metrics.sources_ingested : null} />
+        <LiveKpi label="Packets ready" value={loaded ? knowledge.metrics.packets_ready : null} />
+        <LiveKpi label="Archived sources" value={loaded ? knowledge.metrics.full_sources_archived : null} />
+        <LiveKpi label="Learning events · 7d" value={loaded ? knowledge.metrics.events_7d : null} />
       </div>
       <div className="live-detail-grid">
         <div className="card">
@@ -99,8 +101,8 @@ export default function AegisFloor() {
   </section>
 }
 
-function LiveKpi({ label, value }: { label: string; value: number }) {
-  return <div className="floor-kpi"><span>{label}</span><strong>{value.toLocaleString()}</strong><small>runtime value</small></div>
+function LiveKpi({ label, value }: { label: string; value: number | null }) {
+  return <div className="floor-kpi"><span>{label}</span><strong>{value === null ? '—' : value.toLocaleString()}</strong><small>{value === null ? 'waiting for runtime' : 'runtime value'}</small></div>
 }
 
 function LiveRow({ label, value }: { label: string; value: string }) {
