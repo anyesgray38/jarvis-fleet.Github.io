@@ -1,0 +1,12 @@
+[Unit]
+Description=AEGIS dashboard host firewall guard
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c '/usr/sbin/nft list table inet aegis_guard >/dev/null 2>&1 && /usr/sbin/nft delete table inet aegis_guard || true; /usr/sbin/nft -f /etc/aegis-firewall.nft'
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

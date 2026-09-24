@@ -122,14 +122,15 @@ services:
       SHARK_API_URL: ${SHARK_API_URL:-}
       SHARK_ADMIN_KEY: ${SHARK_ADMIN_KEY:-}
       NODE_ENV: production
-      HOSTNAME: 127.0.0.1
+      AEGIS_WEB_BIND: ${AEGIS_WEB_BIND:-127.0.0.1}
+      HOSTNAME: ${AEGIS_WEB_BIND:-127.0.0.1}
       NODE_OPTIONS: --max-old-space-size=512
     depends_on:
       orchestrator:
         condition: service_healthy
       model-runtime:
         condition: service_healthy
-    command: ["npm", "run", "start", "--", "-H", "127.0.0.1", "-p", "3000"]
+    command: ["npm", "run", "start", "--", "-H", "${AEGIS_WEB_BIND:-127.0.0.1}", "-p", "3000"]
     mem_limit: 768m
     cpus: 1.0
     pids_limit: 128

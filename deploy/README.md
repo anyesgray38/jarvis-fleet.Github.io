@@ -1,6 +1,6 @@
 # AEGIS Tailscale-only deployment
 
-This deployment keeps the AEGIS control plane private. The web application listens only on localhost and **Tailscale Serve is the only ingress**. There is no Cloudflare Tunnel, Funnel, public hostname, or public port mapping.
+This deployment keeps the AEGIS control plane private by default. The web application listens only on localhost and **Tailscale Serve is the default ingress**. There is no Cloudflare Tunnel, Funnel, or public hostname.
 
 ## Architecture
 
@@ -58,6 +58,20 @@ Open the URL printed by `tailscale serve status` from your iPhone while the iPho
 Do **not** run `tailscale funnel`. Funnel is intentionally not part of this deployment.
 
 Do not expose port `3000` through a router, cloud load balancer, or public firewall rule. The AEGIS web service is deliberately bound to `127.0.0.1`; Tailscale Serve is the ingress layer.
+
+### Optional private-interface access
+
+For a desktop on the host's private interface, set `AEGIS_WEB_BIND=0.0.0.0` in the untracked `deploy/.env` and install the included firewall guard:
+
+```bash
+sudo install -m 0644 deploy/aegis-firewall.nft /etc/aegis-firewall.nft
+sudo install -m 0644 deploy/aegis-firewall.service /etc/systemd/system/aegis-firewall.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now aegis-firewall.service
+docker compose --env-file deploy/.env -f deploy/compose.yml up -d web
+```
+
+The guard allows port `3000` only from the configured private `/30` and loopback, while the authenticated gateway remains on loopback at `127.0.0.1:8877`. Do not enable this mode without the firewall guard. The current host's direct address is `http://100.115.92.26:3000`.
 
 The model runtime also binds to localhost. LM Studio and LocalAI default to localhost on ports `1234` and `8080` respectively. Override their URLs in `deploy/.env` if inference runs on a separate worker.
 

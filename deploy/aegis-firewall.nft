@@ -1,0 +1,14 @@
+table inet aegis_guard {
+  chain input {
+    type filter hook input priority -100; policy accept;
+
+    # Tailscale Serve and local health checks proxy through loopback.
+    iifname "lo" tcp dport 3000 accept
+
+    # Direct desktop access is limited to this host's private /30.
+    iifname "eth0" ip saddr 100.115.92.24/30 tcp dport 3000 accept
+
+    # Fail closed for every other source attempting the dashboard port.
+    tcp dport 3000 counter drop
+  }
+}
