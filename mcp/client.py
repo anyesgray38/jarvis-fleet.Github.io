@@ -17,6 +17,8 @@ from typing import Any, Protocol
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+MCP_PROTOCOL_VERSION = os.environ.get("AEGIS_MCP_PROTOCOL_VERSION", "2025-11-25")
+
 
 class McpError(RuntimeError):
     """Protocol, transport, or server-side MCP error."""
@@ -111,18 +113,26 @@ class StdioTransport:
 class StreamableHttpTransport:
     url: str
     headers: dict[str, str] = field(default_factory=dict)
+    session_id: str | None = field(default=None, init=False)
+    _counter: int = field(default=0, init=False)
 
     def request(self, message: dict[str, Any], *, timeout: float) -> dict[str, Any]:
-        body = json.dumps(message, separators=(",", ":")).encode("utf-8")
-        method = str(message.get("method", ""))
-        params = message.get("params", {}) or {}
+        request_message = dict(message)
+        if "id" not in request_message:
+            self._counter += 1
+            request_message["id"] = self._counter
+        body = json.dumps(request_message, separators=(",", ":")).encode("utf-8")
+        method = str(request_message.get("method", ""))
+        params = request_message.get("params", {}) or {}
         request_headers = {
             "Content-Type": "application/json",
             "Accept": "application/json, text/event-stream",
-            "MCP-Protocol-Version": "2026-07-28",
+            "MCP-Protocol-Version": MCP_PROTOCOL_VERSION,
             "Mcp-Method": method,
             **self.headers,
         }
+        if self.session_id:
+            request_headers["Mcp-Session-Id"] = self.session_id
         if method in {"tools/call", "resources/read", "prompts/get"}:
             name = params.get("name") or params.get("uri")
             if isinstance(name, str):
@@ -130,6 +140,9 @@ class StreamableHttpTransport:
         request = Request(self.url, data=body, headers=request_headers, method="POST")
         try:
             with urlopen(request, timeout=timeout) as response:
+                session_id = response.headers.get("Mcp-Session-Id")
+                if session_id:
+                    self.session_id = session_id
                 raw = response.read().decode("utf-8")
         except HTTPError as exc:
             raw = exc.read().decode("utf-8", errors="replace")
@@ -193,7 +206,7 @@ class McpClient:
         request["params"].setdefault(
             "_meta",
             {
-                "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+                "io.modelcontextprotocol/protocolVersion": MCP_PROTOCOL_VERSION,
                 "io.modelcontextprotocol/clientInfo": {"name": self.client_name, "version": self.client_version},
                 "io.modelcontextprotocol/clientCapabilities": {},
             },
@@ -210,7 +223,7 @@ class McpClient:
             initialize = self._request(
                 "initialize",
                 {
-                    "protocolVersion": "2025-06-18",
+                    "protocolVersion": MCP_PROTOCOL_VERSION,
                     "capabilities": {},
                     "clientInfo": {"name": self.client_name, "version": self.client_version},
                 },

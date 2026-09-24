@@ -18,6 +18,9 @@ from pathlib import Path
 from urllib.parse import quote, urlencode
 from urllib.request import Request, urlopen
 
+from mcp.admission import AdmissionController
+from mcp.fabric import McpCapabilityFabric
+
 BIND = os.environ.get("AEGIS_KNOWLEDGE_BIND", "127.0.0.1")
 PORT = int(os.environ.get("AEGIS_KNOWLEDGE_PORT", "8892"))
 TOKEN = os.environ.get("AEGIS_KNOWLEDGE_TOKEN", "")
@@ -27,6 +30,8 @@ STORE_PATH = DATA_ROOT / "knowledge.json"
 MAX_BODY = 32 * 1024
 REQUEST_TIMEOUT = 20
 FIRECRAWL_KEY = os.environ.get("FIRECRAWL_API_KEY", "")
+FIRECRAWL_OAUTH_TOKEN = os.environ.get("FIRECRAWL_OAUTH_TOKEN", "")
+FIRECRAWL_MCP_URL = os.environ.get("FIRECRAWL_MCP_URL", "https://mcp.firecrawl.dev/v2/mcp")
 WIKI_TOPICS = [item.strip() for item in os.environ.get("AEGIS_KNOWLEDGE_WIKI_TOPICS", "").split(",") if item.strip()]
 WEB_SOURCES = [item.strip() for item in os.environ.get("AEGIS_KNOWLEDGE_WEB_SOURCES", "").split(",") if item.strip()]
 INTERVAL_MINUTES = max(5, int(os.environ.get("AEGIS_KNOWLEDGE_INTERVAL_MINUTES", "360")))
@@ -95,24 +100,68 @@ def wiki_source(query: str) -> dict:
     }
 
 
+class FirecrawlMcpAdapter:
+    def __init__(self) -> None:
+        self.fabric = McpCapabilityFabric(admission=AdmissionController(max_risk_score=35.0))
+        self.ready = False
+        self.error: str | None = None
+
+    def ensure(self) -> None:
+        if self.ready:
+            return
+        headers = {}
+        credential = FIRECRAWL_OAUTH_TOKEN or FIRECRAWL_KEY
+        if credential:
+            headers["Authorization"] = f"Bearer {credential}"
+        self.fabric.register({
+            "id": "mcp.firecrawl",
+            "name": "Firecrawl MCP Server",
+            "repository": "https://github.com/firecrawl/firecrawl-mcp-server",
+            "category": "Research & Web Intelligence",
+            "transport": "streamable_http",
+            "url": FIRECRAWL_MCP_URL,
+            "headers": headers,
+        })
+        decision = self.fabric.discover("mcp.firecrawl", timeout=25.0)
+        if not decision.approved:
+            raise RuntimeError(f"Firecrawl MCP rejected by Aegis admission: {', '.join(decision.reasons)}")
+        self.ready = True
+        self.error = None
+
+    def scrape(self, url: str) -> dict:
+        self.ensure()
+        result = self.fabric.invoke("mcp.firecrawl", "firecrawl_scrape", {
+            "url": url,
+            "formats": ["markdown"],
+            "onlyMainContent": True,
+        }, timeout=45.0)
+        text_items = [item.get("text", "") for item in result.get("content", []) if isinstance(item, dict) and item.get("type") == "text"]
+        raw = "\n".join(item for item in text_items if item)
+        try:
+            data = json.loads(raw) if raw else {}
+        except json.JSONDecodeError:
+            data = {"markdown": raw}
+        content = data.get("markdown") or data.get("content") or raw
+        if not content:
+            raise RuntimeError("Firecrawl MCP returned no markdown content")
+        return {
+            "title": data.get("metadata", {}).get("title") or url,
+            "url": url,
+            "content": content,
+            "provider": "firecrawl-mcp",
+        }
+
+
+FIRECRAWL = FirecrawlMcpAdapter()
+
+
 def firecrawl_source(url: str) -> dict:
-    if not FIRECRAWL_KEY:
-        raise RuntimeError("FIRECRAWL_API_KEY is not configured for web intake")
-    result = request_json(
-        "https://api.firecrawl.dev/v1/scrape",
-        method="POST",
-        payload={"url": url, "formats": ["markdown"], "onlyMainContent": True},
-        headers={"Authorization": f"Bearer {FIRECRAWL_KEY}"},
-    )
-    data = result.get("data") or result
-    content = data.get("markdown") or data.get("content") or ""
-    if not content:
-        raise RuntimeError("Firecrawl returned no markdown content")
+    source = FIRECRAWL.scrape(url)
     return {
-        "title": data.get("metadata", {}).get("title") or url,
-        "url": url,
-        "content": content,
-        "provider": "firecrawl",
+        "title": source["title"],
+        "url": source["url"],
+        "content": source["content"],
+        "provider": source["provider"],
     }
 
 
@@ -146,7 +195,12 @@ class KnowledgeStore:
         return {
             "ok": True,
             "configured": bool(TOKEN),
-            "providers": {"wikipedia": True, "firecrawl": bool(FIRECRAWL_KEY)},
+            "providers": {
+                "wikipedia": True,
+                "firecrawl": bool(FIRECRAWL_MCP_URL),
+                "firecrawl_mcp": bool(FIRECRAWL_MCP_URL),
+                "firecrawl_authenticated": bool(FIRECRAWL_KEY or FIRECRAWL_OAUTH_TOKEN),
+            },
             "metrics": {
                 "sources_ingested": len(sources),
                 "packets_ready": len(sources),
@@ -248,7 +302,7 @@ class Handler(BaseHTTPRequestHandler):
             return
         path = self.path.split("?", 1)[0]
         if path == "/health":
-            self.send_json(200, {"ok": True, "service": "aegis-knowledge-runtime", "providers": {"wikipedia": True, "firecrawl": bool(FIRECRAWL_KEY)}})
+            self.send_json(200, {"ok": True, "service": "aegis-knowledge-runtime", "providers": {"wikipedia": True, "firecrawl": bool(FIRECRAWL_MCP_URL), "firecrawl_authenticated": bool(FIRECRAWL_KEY or FIRECRAWL_OAUTH_TOKEN)}})
         elif path == "/snapshot":
             self.send_json(200, STORE.snapshot())
         elif path.startswith("/source/"):

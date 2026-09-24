@@ -71,6 +71,8 @@ services:
       AEGIS_KNOWLEDGE_WIKI_TOPICS: ${AEGIS_KNOWLEDGE_WIKI_TOPICS:-}
       AEGIS_KNOWLEDGE_WEB_SOURCES: ${AEGIS_KNOWLEDGE_WEB_SOURCES:-}
       FIRECRAWL_API_KEY: ${FIRECRAWL_API_KEY:-}
+      FIRECRAWL_OAUTH_TOKEN: ${FIRECRAWL_OAUTH_TOKEN:-}
+      FIRECRAWL_MCP_URL: ${FIRECRAWL_MCP_URL:-https://mcp.firecrawl.dev/v2/mcp}
       PYTHONUNBUFFERED: "1"
     volumes:
       - aegis-knowledge:/app/knowledge-data

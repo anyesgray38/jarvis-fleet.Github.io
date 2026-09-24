@@ -4,6 +4,16 @@
   "purpose": "Research-derived high-value MCP capability profiles; the full catalog remains dynamically parseable.",
   "servers": [
     {
+      "id": "mcp.firecrawl",
+      "name": "Firecrawl MCP Server",
+      "repository": "https://github.com/firecrawl/firecrawl-mcp-server",
+      "category": "Research & Web Intelligence",
+      "upgrade": ["web_search", "web_scrape", "source_distillation", "bounded_context"],
+      "trust": "candidate",
+      "transport": "streamable_http",
+      "url": "https://mcp.firecrawl.dev/v2/mcp"
+    },
+    {
       "id": "mcp.1mcp",
       "name": "1MCP",
       "repository": "https://github.com/1mcp-app/agent",
