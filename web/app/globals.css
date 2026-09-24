@@ -422,3 +422,7 @@ h1, h2, h3, p { margin-top: 0; }
   .maintenance-summary { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .maintenance-page .maintenance-head { flex-direction: column; }
 }
+
+.prospect-classification { display: grid; min-width: 125px; max-width: 170px; border: 1px solid #315843; border-radius: 10px; background: #14251d; color: var(--accent); padding: 8px; text-align: right; }
+.prospect-classification strong { font-size: 11px; line-height: 1.15; text-transform: uppercase; }
+.prospect-classification span { margin-top: 4px; color: var(--muted); font-size: 8px; line-height: 1.25; }
