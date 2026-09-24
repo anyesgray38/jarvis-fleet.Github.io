@@ -29,6 +29,33 @@ services:
       retries: 5
       start_period: 10s
 
+  gateway:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.python
+    network_mode: host
+    command: ["python3", "aegis_gateway.py"]
+    environment:
+      AEGIS_GATEWAY_TOKEN: ${AEGIS_GATEWAY_TOKEN:?Set AEGIS_GATEWAY_TOKEN}
+      AEGIS_GATEWAY_BIND: 127.0.0.1
+      AEGIS_GATEWAY_PORT: 8877
+      AEGIS_ORCHESTRATOR_URL: http://127.0.0.1:8888
+      PYTHONUNBUFFERED: "1"
+    depends_on:
+      orchestrator:
+        condition: service_healthy
+    mem_limit: 256m
+    cpus: 0.5
+    pids_limit: 64
+    init: true
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import os,urllib.request; r=urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:8877/health', headers={'Authorization':'Bearer '+os.environ['AEGIS_GATEWAY_TOKEN']}), timeout=2); raise SystemExit(0 if r.status == 200 else 1)"]
+      interval: 15s
+      timeout: 4s
+      retries: 5
+      start_period: 5s
+
   localai:
     image: localai/localai:latest
     network_mode: host
@@ -88,6 +115,8 @@ services:
       dockerfile: deploy/Dockerfile.web
     network_mode: host
     environment:
+      AEGIS_GATEWAY_URL: http://127.0.0.1:8877
+      AEGIS_GATEWAY_TOKEN: ${AEGIS_GATEWAY_TOKEN:?Set AEGIS_GATEWAY_TOKEN}
       AEGIS_ORCHESTRATOR_URL: http://127.0.0.1:8888
       AEGIS_MODEL_RUNTIME_URL: http://127.0.0.1:8891
       SHARK_API_URL: ${SHARK_API_URL:-}

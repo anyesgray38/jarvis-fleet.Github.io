@@ -16,6 +16,17 @@ if [[ ! -f deploy/.env ]]; then
   cp deploy/.env.example deploy/.env
 fi
 
+# The dashboard talks to the orchestrator only through this loopback gateway.
+if ! grep -q '^AEGIS_GATEWAY_TOKEN=' deploy/.env \
+  || grep -Eq '^AEGIS_GATEWAY_TOKEN=(|replace-with-a-different-long-random-secret)$' deploy/.env; then
+  gateway_token="$(dd if=/dev/urandom bs=32 count=1 2>/dev/null | od -An -tx1 | tr -d ' \n')"
+  if grep -q '^AEGIS_GATEWAY_TOKEN=' deploy/.env; then
+    sed -i "s/^AEGIS_GATEWAY_TOKEN=.*/AEGIS_GATEWAY_TOKEN=${gateway_token}/" deploy/.env
+  else
+    printf '\nAEGIS_GATEWAY_TOKEN=%s\n' "$gateway_token" >> deploy/.env
+  fi
+fi
+
 # Never accept the checked-in template value as a real credential.
 if ! grep -q '^AEGIS_FLEET_SECRET=' deploy/.env \
   || grep -Eq '^AEGIS_FLEET_SECRET=(|replace-with-a-long-random-secret)$' deploy/.env; then
