@@ -530,6 +530,36 @@ h1, h2, h3, p { margin-top: 0; }
 .aegis-roster-row strong,.aegis-roster-row small { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .aegis-roster-row strong { color:#dcebf3; font-size:9px; }
 .aegis-roster-row small { margin-top:3px; color:#718b9d; font-size:7px; }
+.aegis-agent-workspace { margin:10px 0; border:1px solid #31566a; border-radius:14px; background:linear-gradient(145deg,#0d1b27,#09121b); padding:16px; box-shadow:0 12px 32px rgba(0,0,0,.2); }
+.aegis-workspace-header { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; border-bottom:1px solid #203b4c; padding-bottom:14px; }
+.aegis-workspace-identity { display:flex; align-items:center; gap:11px; min-width:0; }
+.aegis-workspace-icon { display:grid; place-items:center; width:40px; height:40px; border:1px solid currentColor; border-radius:11px; font-size:18px; }
+.aegis-workspace-icon.tone-cyan{color:#68d9ee}.aegis-workspace-icon.tone-green{color:#72e8a9}.aegis-workspace-icon.tone-pink{color:#f27bd6}.aegis-workspace-icon.tone-violet{color:#a88cff}.aegis-workspace-icon.tone-amber{color:#f3c86b}.aegis-workspace-icon.tone-orange{color:#ffab69}.aegis-workspace-icon.tone-blue{color:#72bfff}.aegis-workspace-icon.tone-teal{color:#69e2d4}
+.aegis-workspace-header h2 { margin:4px 0 3px; color:#e4f5fb; font-size:18px; letter-spacing:.05em; }
+.aegis-workspace-header p { margin:0; color:#7894a5; font-size:10px; }
+.aegis-workspace-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+.aegis-workspace-status { border:1px solid #704c4c; border-radius:999px; color:#e8a6a6; padding:6px 8px; font-size:7px; font-weight:800; letter-spacing:.08em; }
+.aegis-workspace-status.online { border-color:#32644f; background:#10241c; color:#9ee7c4; }
+.aegis-workspace-actions .close { border:1px solid #3e687b; border-radius:7px; background:#123040; color:#ccecf5; padding:7px 9px; font-size:7px; font-weight:850; letter-spacing:.06em; cursor:pointer; }
+.aegis-workspace-grid { display:grid; grid-template-columns:1.05fr 1.25fr 1fr; gap:10px; margin-top:12px; }
+.aegis-workspace-card { min-width:0; border:1px solid #253f50; border-radius:10px; background:rgba(8,17,25,.72); padding:12px; }
+.aegis-workspace-card > .aegis-panel-title { margin-bottom:10px; }
+.aegis-workspace-overview { grid-row:span 2; }
+.aegis-workspace-metric { display:flex; justify-content:space-between; gap:8px; border-top:1px solid #1d3341; padding:8px 0; }
+.aegis-workspace-metric span,.aegis-workspace-route span { color:#597587; font-size:7px; font-weight:800; letter-spacing:.08em; }
+.aegis-workspace-metric strong { color:#bfeff1; font-size:9px; text-align:right; }
+.aegis-workspace-nodes { display:grid; gap:8px; margin-top:8px; }
+.aegis-workspace-nodes > div { display:flex; align-items:center; gap:7px; }
+.aegis-workspace-nodes span { min-width:0; }
+.aegis-workspace-nodes strong,.aegis-workspace-nodes small { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.aegis-workspace-nodes strong { color:#dcebf3; font-size:8px; }.aegis-workspace-nodes small { margin-top:2px; color:#718b9d; font-size:7px; }
+.aegis-workspace-copy { margin:0 0 9px; color:#7894a5; font-size:9px; line-height:1.5; }
+.aegis-test-option { display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%; border:1px solid #2a4859; border-radius:8px; background:#0c1b27; color:#ccecf5; margin-top:6px; padding:9px; text-align:left; cursor:pointer; }
+.aegis-test-option:hover:not(:disabled) { border-color:#69d5e2; background:#102b39; }.aegis-test-option:disabled { cursor:not-allowed; opacity:.45; }
+.aegis-test-option strong,.aegis-test-option small { display:block; }.aegis-test-option strong { font-size:8px; letter-spacing:.06em; }.aegis-test-option small { margin-top:3px; color:#718b9d; font-size:7px; line-height:1.35; }.aegis-test-option i { color:#79dfc0; font-size:7px; font-style:normal; font-weight:800; white-space:nowrap; }
+.aegis-role-options { display:grid; gap:8px; }.aegis-role-options div { border-top:1px solid #1d3341; padding-top:8px; }.aegis-role-options span { display:block; color:#597587; font-size:7px; font-weight:800; letter-spacing:.08em; }.aegis-role-options strong { display:block; margin-top:4px; color:#c9dce5; font-size:9px; line-height:1.4; }
+.aegis-workspace-route { margin-top:12px; border-top:1px solid #1d3341; padding-top:9px; }.aegis-workspace-route strong { display:block; margin-top:4px; color:#83d9db; font-size:8px; overflow-wrap:anywhere; }
+.aegis-workspace-activity { grid-column:2 / -1; }.aegis-workspace-activity .aegis-activity-row { margin-top:8px; }
 .aegis-preview-panel { margin:10px 0; border:1px solid #253746; border-radius:14px; background:linear-gradient(145deg,#0e1923,#0a121b); padding:16px; }
 .aegis-preview-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; }
 .aegis-preview-heading h2 { margin:5px 0 4px; color:#dcebf3; font-size:16px; letter-spacing:.08em; }
@@ -576,6 +606,9 @@ h1, h2, h3, p { margin-top: 0; }
   .aegis-brain strong { font-size:18px; }
   .aegis-control-cards { width:86%; }
   .aegis-center-caption { width:85%; }
+  .aegis-workspace-grid { grid-template-columns:1fr 1fr; }
+  .aegis-workspace-overview { grid-row:auto; }
+  .aegis-workspace-activity { grid-column:1 / -1; }
 }
 @media (max-width:600px) {
   .aegis-4d-layout { border-radius:12px; }
@@ -594,6 +627,10 @@ h1, h2, h3, p { margin-top: 0; }
   .aegis-bottom-grid { grid-template-columns:1fr; }
   .aegis-preview-heading { flex-direction:column; }
   .aegis-preview-frame { height:360px; }
+  .aegis-workspace-header { flex-direction:column; }
+  .aegis-workspace-actions { justify-content:flex-start; }
+  .aegis-workspace-grid { grid-template-columns:1fr; }
+  .aegis-workspace-activity { grid-column:auto; }
 }
 
 
