@@ -285,6 +285,7 @@ export default function AegisCommandCenter({ agents, jobs, connected, onAction }
             <div><div className="aegis-kicker">{selectedAgent.label}</div><strong>{selectedAgent.subtitle}</strong></div>
           </div>
           <div className="aegis-detail-actions">
+            <a className="agent-site-open" href={`/agents/${selectedAgent.key}`}>OPEN {selectedAgent.label} SITE ↗</a>
             <button type="button" className="secondary" onClick={() => { const node = agents.find(agent => agent.tags.includes(capabilityTags[selectedAgent.key]) && agent.alive) || agents.find(agent => agent.tags.includes(capabilityTags[selectedAgent.key])) || agents.find(agent => agent.alive) || agents[0]; if (node && selectedProfile) void onAction({ action: 'queue', hostname: node.hostname, cmd: selectedProfile.tests[0].command }) }} disabled={!agents.length || !selectedProfile}>RUN {selectedProfile?.tests[0].label || 'AGENT TEST'}</button>
             <button type="button" className="close" onClick={() => setSelected(null)} aria-label="Close agent detail">×</button>
           </div>
