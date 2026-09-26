@@ -4,11 +4,12 @@ import PentestConsole from './components/PentestConsole'
 import AegisChat from './components/AegisChat'
 import PentestChat from './components/PentestChat'
 import AegisFloor from './components/AegisFloor'
+import AegisCommandCenter from './components/AegisCommandCenter'
 import ProspectingDashboard from './components/ProspectingDashboard'
 import MaintenancePanel from './components/MaintenancePanel'
 
 const navGroups = [
-  { label: 'Command', items: ['Aegis Floor', 'Overview', 'Chat'] },
+  { label: 'Command', items: ['4D Central', 'Aegis Floor', 'Overview', 'Chat'] },
   { label: 'Operations', items: ['Tasks', 'Agents', 'Prospecting'] },
   { label: 'Security', items: ['Pentest Chat', 'Pentest', 'Maintenance'] },
 ]
@@ -18,7 +19,7 @@ type State = { connected: boolean; upstreamConfigured: boolean; agents: Agent[];
 const initial: State = { connected: false, upstreamConfigured: false, agents: [], jobs: [], error: null, fetchedAt: '' }
 
 export default function Home() {
-  const [active, setActive] = useState('Aegis Floor')
+  const [active, setActive] = useState('4D Central')
   const [data, setData] = useState(initial)
   const [loading, setLoading] = useState(true)
   const [actionMessage, setActionMessage] = useState<string | null>(null)
@@ -71,7 +72,7 @@ export default function Home() {
     }
   }
   return <div className="shell"><aside className="sidebar"><div className="brand"><div className="brand-mark">A</div><div><div className="brand-name">AEGIS</div><div className="brand-caption">CONTROL CENTER</div></div></div><div className="sidebar-intro">Your governed operator workspace.</div><nav className="nav" aria-label="AEGIS sections">{navGroups.map(group => <div className="nav-group" key={group.label}><div className="nav-label">{group.label}</div>{group.items.map(n => <button type="button" key={n} className={active === n ? 'active' : ''} aria-current={active === n ? 'page' : undefined} onClick={() => { setActive(n); setActionMessage(null) }}><span>{n}</span>{active === n && <span className="nav-current" aria-hidden="true">›</span>}</button>)}</div>)}</nav><div className="sidebar-bottom"><div className="sidebar-status"><i className={data.connected ? 'dot' : 'dot off'} />{data.connected ? 'Systems connected' : 'Gateway offline'}</div><div className="footer">CONTROL PLANE v1.1<br />Private Tailscale workspace</div></div></aside><main className="main"><header className="top"><div><div className="eyebrow">{active} <span className="crumb">/ AEGIS workspace</span></div><div className="title">AEGIS Control Center</div><div className="muted">A clear view of your systems, operations, and next actions.</div></div><div className="status" role="status" aria-live="polite"><i className={data.connected ? 'dot' : 'dot off'} /><span>{data.connected ? 'Systems connected' : 'Gateway disconnected'}</span><button type="button" className="refresh" onClick={() => void refresh()} disabled={refreshing}>{refreshing ? 'Syncing…' : 'Refresh'}</button></div></header>{!data.connected && <div className="notice" role="alert">{data.error || 'Connect the dashboard to the authenticated AEGIS gateway on the Linux host.'}</div>}{actionMessage && <div className={actionMessage.includes('accepted') ? 'notice success' : 'notice'}>{actionMessage}</div>}
-      {active === 'Aegis Floor' && <AegisFloor />}
+      {active === '4D Central' && <AegisCommandCenter agents={data.agents} jobs={data.jobs} connected={data.connected} onNavigate={setActive} onAction={action} />}\n      {active === 'Aegis Floor' && <AegisFloor />}
       {active === 'Prospecting' && <ProspectingDashboard />}
       {active === 'Overview' && <Overview data={data} activeJobs={activeJobs} liveAgents={liveAgents} recentJobs={recentJobs} loading={loading} />}
       {active === 'Chat' && <AegisChat />}
