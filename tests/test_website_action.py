@@ -65,9 +65,21 @@ class WebsiteActionTests(unittest.TestCase):
         with self.assertRaises(ActionError):
             default_fabric().execute(
                 "website.create",
-                {"name": "demo", "title": "X", "description": "Y", "accent": "red"},
-                self.context,
-            )
+                    {"name": "demo", "title": "X", "description": "Y", "accent": "red"},
+                    self.context,
+                )
+
+    def test_autonomous_app_builder_runs_all_stages(self):
+        result = default_fabric().execute(
+            "builder.run",
+            {"kind": "app", "name": "task-app", "title": "Task App", "description": "Capture small tasks locally."},
+            self.context,
+        )
+        project = self.workspace / "task-app"
+        self.assertEqual(result.output["status"], "PASS")
+        self.assertEqual([stage["stage"] for stage in result.output["stages"]], ["create", "build", "test"])
+        self.assertTrue((project / "app.webmanifest").is_file())
+        self.assertTrue(result.output["evidence"]["checks"]["form_label"])
 
 
 if __name__ == "__main__":

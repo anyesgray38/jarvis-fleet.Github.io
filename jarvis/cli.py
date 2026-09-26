@@ -74,6 +74,14 @@ def build_parser()->argparse.ArgumentParser:
     plist=pp.add_parser("list",help="list stored prospects");plist.add_argument("--min-score",type=int,default=0);plist.add_argument("--limit",type=int,default=100)
     pshow=pp.add_parser("show",help="show one stored prospect");pshow.add_argument("business_id")
     pbuild=pp.add_parser("build",help="generate and verify one prospect demonstration");pbuild.add_argument("business_id");pbuild.add_argument("--output",dest="output_root",default=".jarvis/prospects")
+    builder=sub.add_parser("builder",help="autonomously create and verify a website or web app")
+    builder.add_argument("name")
+    builder.add_argument("--kind",choices=("website","app"),default="website")
+    builder.add_argument("--title",required=True)
+    builder.add_argument("--description",required=True)
+    builder.add_argument("--accent",default="#7dd3fc")
+    builder.add_argument("--workspace",default=".jarvis/builds")
+    builder.add_argument("--overwrite",action="store_true")
     knowledge=sub.add_parser("knowledge",help="query or grow the local AEGIS second brain")
     kp=knowledge.add_subparsers(dest="knowledge_command")
     ksearch=kp.add_parser("search",help="search compact local knowledge packets");ksearch.add_argument("query");ksearch.add_argument("--department",default="");ksearch.add_argument("--limit",type=int,default=8);ksearch.add_argument("--full",action="store_true")
@@ -138,6 +146,24 @@ def _business_scan(args):
     request=ScanRequest(target=args.target,category=args.category,radius_miles=args.radius_miles,max_results=max(1,min(100,args.max_results)),generate_limit=max(0,min(10,args.generate)),output_root=args.output_root,source_urls=tuple(args.source_url))
     result=BusinessProspectingAgent(store=ProspectStore(os.getenv("AEGIS_PROSPECT_DB",".jarvis/prospects.db"))).scan(request)
     return _emit(args,result.to_dict(),text=json.dumps(result.summary(),indent=2))
+def _builder(args):
+    workspace=Path(args.workspace).expanduser().resolve()
+    workspace.mkdir(parents=True,exist_ok=True)
+    args.safety_config=str(Path(args.safety_config).expanduser().resolve())
+    args.objective=f"Build and verify {args.kind} project {args.name}"
+    args.capability="core.autonomous_builder"
+    args.trust="PREPARE"
+    args.input=json.dumps({"name":args.name,"kind":args.kind,"title":args.title,"description":args.description,"accent":args.accent,"overwrite":args.overwrite})
+    args.verification={"required":True,"checks":["evidence"]}
+    args.execute=True
+    args.security_json=None
+    original=Path.cwd()
+    try:
+        os.chdir(workspace)
+        result=_run(args)
+    finally:
+        os.chdir(original)
+    return result
 def _prospect(args):
     from prospecting.store import ProspectStore
     store=ProspectStore(os.getenv("AEGIS_PROSPECT_DB",".jarvis/prospects.db"))
@@ -223,6 +249,7 @@ def execute(args):
     if args.command=="status":return _emit(args,_status(args))
     if args.command=="project":return _project(args)
     if args.command=="business-scan":return _business_scan(args)
+    if args.command=="builder":return _builder(args)
     if args.command=="prospect":return _prospect(args)
     if args.command=="knowledge":return _knowledge(args)
     if args.command=="safety":return _safety(args)

@@ -10,7 +10,7 @@ class ActionFabricTests(unittest.TestCase):
         fabric = default_fabric()
         self.assertEqual(
             fabric.available(),
-            ["filesystem.read", "filesystem.write", "website.create"],
+            ["builder.run", "filesystem.read", "filesystem.write", "project.build", "project.create", "project.test", "website.create"],
         )
 
     def test_write_and_read_stay_inside_workspace(self):

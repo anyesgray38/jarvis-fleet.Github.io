@@ -1,5 +1,5 @@
 {
-  "version": 10,
+  "version": 11,
   "purpose": "Domain-agnostic capability registry for AEGIS",
   "capabilities": [
     {
@@ -103,6 +103,31 @@
         "build_validation",
         "browser_check",
         "self_audit"
+      ]
+    },
+    {
+      "id": "core.autonomous_builder",
+      "provider": "aegis",
+      "kind": "core",
+      "tags": [
+        "builder",
+        "app",
+        "website",
+        "coding",
+        "project",
+        "build",
+        "generate",
+        "scaffold",
+        "create"
+      ],
+      "execution": "agent",
+      "action": "builder.run",
+      "verification": [
+        "workspace",
+        "build_validation",
+        "self_test",
+        "artifact_integrity",
+        "evidence"
       ]
     },
     {

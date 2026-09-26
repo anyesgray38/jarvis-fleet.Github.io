@@ -43,6 +43,13 @@
       "verification": ["test_results", "regression"]
     },
     {
+      "id": "builder.run",
+      "risk": "write",
+      "execution": "agent",
+      "status": "policy_gated",
+      "verification": ["workspace", "build_validation", "self_test", "artifact_integrity", "evidence"]
+    },
+    {
       "id": "git.commit",
       "risk": "write",
       "execution": "agent",

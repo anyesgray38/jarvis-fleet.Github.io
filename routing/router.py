@@ -61,6 +61,7 @@ class SkillRouter:
     @staticmethod
     def _skill_for(terms: set[str], skills: set[str]) -> str | None:
         aliases = (
+            ("builder", {"builder", "app", "scaffold"}),
             ("website-operation", {"website", "browser", "web"}),
             ("github-research", {"github", "repository", "research"}),
             ("coding", {"coding", "software", "frontend"}),

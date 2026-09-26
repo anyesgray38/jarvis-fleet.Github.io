@@ -118,10 +118,15 @@ def shell_execute(context: ActionContext, args: dict[str, Any]) -> dict[str, Any
 
 
 def default_fabric() -> ActionFabric:
+    from .builder import builder_run, project_build, project_create, project_test
     from .website import website_create
 
     fabric = ActionFabric()
     fabric.register("filesystem.read", filesystem_read)
     fabric.register("filesystem.write", filesystem_write)
     fabric.register("website.create", website_create)
+    fabric.register("project.create", project_create)
+    fabric.register("project.build", project_build)
+    fabric.register("project.test", project_test)
+    fabric.register("builder.run", builder_run)
     return fabric
