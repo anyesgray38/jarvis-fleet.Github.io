@@ -19,6 +19,7 @@ from urllib.parse import parse_qs, quote, urlencode
 from urllib.request import Request, urlopen
 
 from knowledge.brain import KnowledgeBrain, load_department_plans
+from knowledge.reverse_engineer import reverse_engineer_source
 from mcp.firecrawl import FirecrawlMcpAdapter
 
 BIND = os.environ.get("AEGIS_KNOWLEDGE_BIND", "127.0.0.1")
@@ -185,7 +186,20 @@ class KnowledgeStore:
         if not str(source.get("content", "")).strip():
             raise ValueError("source content is empty")
         content = str(source["content"])
-        source_id = hashlib.sha256(f"{source['provider']}|{source['url']}".encode("utf-8")).hexdigest()[:16]
+        provider = str(source.get("provider") or "unknown")
+        title = str(source.get("title") or source.get("url") or query or "Untitled source")
+        source_url = str(source.get("url") or "")
+        # Understanding is an explicit gate: active memory receives only the
+        # compact result of this local analysis, never raw fetched instructions.
+        reverse_engineering = reverse_engineer_source(
+            title=title,
+            url=source_url,
+            content=content,
+            provider=provider,
+        )
+        if reverse_engineering["status"] != "verified_for_compaction":
+            raise ValueError("source failed provenance verification")
+        source_id = hashlib.sha256(f"{provider}|{source_url}".encode("utf-8")).hexdigest()[:16]
         archive_path = ARCHIVE_ROOT / f"{source_id}.md"
         archive_path.write_text(content, encoding="utf-8")
         created_at = utc_now()
@@ -193,18 +207,26 @@ class KnowledgeStore:
         packet = {
             "id": source_id,
             "kind": kind,
-            "provider": source["provider"],
-            "title": str(source["title"]),
-            "url": str(source["url"]),
+            "provider": provider,
+            "title": title,
+            "url": source_url,
             "manager": manager or ("Scribe" if kind == "wiki" else "Atlas"),
             "department": department or "web-intelligence",
             "research_query": query,
             "summary": distill(content),
+            "concepts": reverse_engineering["concepts"],
+            "claim_count": len(reverse_engineering["claims"]),
             "word_count": len(content.split()),
             "content_hash": content_hash,
             "archive_path": str(archive_path.relative_to(DATA_ROOT)),
             "updated_at": created_at,
             "full_source_available": True,
+            "reverse_engineering": reverse_engineering,
+            "promotion": {
+                "status": "promoted_to_active_memory",
+                "pipeline": ["fetch", "structure", "claims", "concepts", "provenance", "compact", "promote"],
+                "promoted_at": created_at,
+            },
         }
         with self.lock:
             sources = self.data.setdefault("sources", [])
@@ -229,6 +251,14 @@ class KnowledgeStore:
                     "version": packet["version"],
                     "created_at": created_at,
                 })
+                self.data.setdefault("events", []).append({
+                    "type": "knowledge_promoted",
+                    "source_id": source_id,
+                    "department": packet["department"],
+                    "manager": packet["manager"],
+                    "subtasks": packet["reverse_engineering"]["subtasks"],
+                    "created_at": created_at,
+                })
             self.data["events"] = self.data["events"][-500:]
             self._save()
         return packet
@@ -244,7 +274,11 @@ class KnowledgeStore:
         for source in candidates:
             if department and source.get("department") != department:
                 continue
-            haystack = " ".join(str(source.get(key, "")) for key in ("title", "summary", "research_query", "department")).lower()
+            reverse = source.get("reverse_engineering", {})
+            haystack = " ".join(str(source.get(key, "")) for key in ("title", "summary", "research_query", "department"))
+            haystack += " " + " ".join(str(value) for value in reverse.get("concepts", []))
+            haystack += " " + " ".join(str(value) for value in reverse.get("headings", []))
+            haystack = haystack.lower()
             score = sum(1 for term in terms if term in haystack)
             if not score:
                 continue

@@ -79,6 +79,7 @@ def build_parser()->argparse.ArgumentParser:
     builder.add_argument("--kind",choices=("website","app"),default="website")
     builder.add_argument("--title",required=True)
     builder.add_argument("--description",required=True)
+    builder.add_argument("--feature",action="append",default=[],help="allow-listed feature; repeatable")
     builder.add_argument("--accent",default="#7dd3fc")
     builder.add_argument("--workspace",default=".jarvis/builds")
     builder.add_argument("--overwrite",action="store_true")
@@ -153,7 +154,7 @@ def _builder(args):
     args.objective=f"Build and verify {args.kind} project {args.name}"
     args.capability="core.autonomous_builder"
     args.trust="PREPARE"
-    args.input=json.dumps({"name":args.name,"kind":args.kind,"title":args.title,"description":args.description,"accent":args.accent,"overwrite":args.overwrite})
+    args.input=json.dumps({"name":args.name,"kind":args.kind,"title":args.title,"description":args.description,"accent":args.accent,"features":args.feature,"overwrite":args.overwrite})
     args.verification={"required":True,"checks":["evidence"]}
     args.execute=True
     args.security_json=None

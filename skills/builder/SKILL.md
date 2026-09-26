@@ -1,18 +1,21 @@
 # Autonomous Web and App Builder
 
-Use this skill when the objective is to create a website or a dependency-free installable web app.
+Use this skill when the objective is to create a website or a dependency-free installable web app, including requests for real browser functions.
 
 ## Procedure
 
-1. Validate the project name, kind, user-facing title, description, and assigned workspace.
-2. Run the governed `builder.run` action.
-3. Inspect the returned create, build, and self-test evidence.
-4. Stop at the private workspace artifact unless deployment is separately authorized.
+1. Validate the project name, kind, user-facing title, description, requested features, and assigned workspace.
+2. Build a serializable design brief from the request; use only allow-listed feature modules.
+3. Run the governed `builder.run` action.
+4. Inspect the returned design, create, build, and self-test evidence.
+5. Stop at the private workspace artifact unless deployment is separately authorized.
 
 ## Supported outputs
 
 - `website`: responsive static HTML, CSS, JavaScript, and README.
 - `app`: installable web-app starter with a manifest, local browser storage, HTML, CSS, JavaScript, and README.
+
+Allow-listed functions: `contact_form`, `booking`, `quote_request`, `newsletter`, `faq`, `calculator`, and `task_list`.
 
 ## Boundaries
 

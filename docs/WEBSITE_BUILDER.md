@@ -1,6 +1,6 @@
 # AEGIS Autonomous Web and App Builder
 
-The builder is a governed AEGIS capability for producing and verifying a static website or dependency-free installable web app inside an assigned agent workspace.
+The builder is a governed AEGIS capability for producing and verifying a static website or dependency-free installable web app inside an assigned agent workspace. It turns a request into a validated design brief and composes allow-listed interactive features.
 
 ## Execution pipeline
 
@@ -9,6 +9,7 @@ User objective
   -> Planner
   -> Capability Resolution
   -> Security / Policy
+  -> Design brief / feature selection
   -> builder.run
   -> Isolated Workspace
   -> project.create
@@ -39,7 +40,9 @@ The `website` kind produces a dependency-free static project containing:
 - `script.js`
 - `README.md`
 
-This provides a deterministic foundation for the next builder stages: requirements intake, component generation, framework-aware builds, browser testing, visual verification, self-audit, and evidence capture.
+Supported functions include contact capture, booking requests, quote requests, newsletter capture, FAQ accordions, calculators, and local task lists. These demonstrate real browser behavior and persist only to local storage; production email, CRM, payments, scheduling, and authenticated data services remain separately authorized integrations.
+
+The design brief is written to `aegis.design.json` and returned as evidence. AEGIS never treats user text or model output as executable source; only the allow-listed modules can be composed.
 
 The `app` kind produces an installable web-app starter containing:
 
@@ -54,7 +57,8 @@ Run it locally from the repository root:
 ```bash
 python3 -m jarvis builder task-app --kind app \
   --title "Task App" \
-  --description "Capture small tasks locally."
+  --description "Capture small tasks locally." \
+  --feature task_list
 ```
 
 The command runs the governed `builder.run` action and returns create, build, self-test, and artifact evidence. It writes to `.jarvis/builds` by default and does not publish externally.

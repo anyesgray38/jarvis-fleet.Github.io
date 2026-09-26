@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 type Agent = {
   id: number
@@ -20,6 +20,14 @@ type Job = {
   created_at: string
   completed_at: string | null
   result: unknown
+}
+
+type Preview = {
+  name: string
+  kind: 'website' | 'app'
+  files: string[]
+  updated_at: string
+  url: string
 }
 
 type Props = {
@@ -75,11 +83,32 @@ function capabilityState(key: string, agents: Agent[]) {
 export default function AegisCommandCenter({ agents, jobs, connected, onAction }: Props) {
   const [mode, setMode] = useState('present')
   const [selected, setSelected] = useState<string | null>(null)
+  const [previews, setPreviews] = useState<Preview[]>([])
+  const [selectedPreview, setSelectedPreview] = useState<string | null>(null)
   const liveAgents = agents.filter(agent => agent.alive).length
   const activeJobs = jobs.filter(job => ['running', 'queued'].includes(job.status)).length
   const selectedAgent = agentCards.find(agent => agent.key === selected)
 
   const activity = useMemo(() => jobs.slice().reverse().slice(0, 7), [jobs])
+
+  useEffect(() => {
+    let cancelled = false
+    const refreshPreviews = async () => {
+      try {
+        const response = await fetch('/api/previews', { cache: 'no-store' })
+        const payload = await response.json() as { previews?: Preview[] }
+        if (cancelled) return
+        const next = Array.isArray(payload.previews) ? payload.previews : []
+        setPreviews(next)
+        setSelectedPreview(current => current && next.some(preview => preview.name === current) ? current : next[0]?.name || null)
+      } catch {
+        if (!cancelled) setPreviews([])
+      }
+    }
+    void refreshPreviews()
+    const interval = window.setInterval(() => void refreshPreviews(), 5000)
+    return () => { cancelled = true; window.clearInterval(interval) }
+  }, [])
 
   function openAgent(agent: AgentCard) {
     setSelected(agent.key)
@@ -185,6 +214,8 @@ export default function AegisCommandCenter({ agents, jobs, connected, onAction }
       </aside>
     </div>
 
+    <DemoPreviewPanel previews={previews} selected={selectedPreview} onSelect={setSelectedPreview} />
+
     <div className="aegis-bottom-grid">
       <AegisInsight title="LIVE COLLABORATION" icon="◉" copy="The network is represented as a connected graph; live counts come from the control plane." status="CENTRAL VIEW" />
       <AegisInsight title="NEW SYSTEMS" icon="▦" copy="System Builder routes real work through AEGIS while this central surface keeps the command chain visible." status="CENTRAL VIEW" />
@@ -210,4 +241,23 @@ function AegisInsight({ title, icon, copy, status }: { title: string; icon: stri
     <p>{copy}</p>
     <span className="aegis-insight-status">{status}</span>
   </div>
+}
+
+function DemoPreviewPanel({ previews, selected, onSelect }: { previews: Preview[]; selected: string | null; onSelect: (name: string) => void }) {
+  const active = previews.find(preview => preview.name === selected) || previews[0]
+  return <section className="aegis-preview-panel" aria-label="Generated demo previews">
+    <div className="aegis-preview-heading">
+      <div><div className="aegis-kicker">AEGIS · BUILDER OUTPUT</div><h2>DEMO WEBSITE PREVIEW</h2><p>Open the actual artifact created by the autonomous builder. Previews remain private and read-only until deployment is separately authorized.</p></div>
+      <span className="aegis-preview-count">{previews.length} ARTIFACT{previews.length === 1 ? '' : 'S'}</span>
+    </div>
+    {active ? <div className="aegis-preview-layout">
+      <div className="aegis-preview-list">
+        {previews.map(preview => <button type="button" key={preview.name} className={preview.name === active.name ? 'selected' : ''} onClick={() => onSelect(preview.name)}><span><strong>{preview.name}</strong><small>{preview.kind.toUpperCase()} · {preview.files.length} files</small></span><i>›</i></button>)}
+      </div>
+      <div className="aegis-preview-frame-wrap">
+        <div className="aegis-preview-toolbar"><span className="dot" /> <strong>{active.name}</strong><a href={active.url} target="_blank" rel="noreferrer">OPEN FULL DEMO ↗</a></div>
+        <iframe className="aegis-preview-frame" src={active.url} title={`${active.name} generated demo`} sandbox="allow-scripts allow-forms" />
+      </div>
+    </div> : <div className="aegis-empty aegis-preview-empty">No generated demos yet. Run the autonomous builder to create the first preview.</div>}
+  </section>
 }

@@ -25,7 +25,7 @@ class WebsiteActionTests(unittest.TestCase):
         )
         project = self.workspace / "demo-site"
         self.assertEqual(result.status, "passed")
-        self.assertEqual(result.output["files"], ["README.md", "index.html", "script.js", "styles.css"])
+        self.assertEqual(result.output["files"], ["README.md", "aegis.design.json", "index.html", "script.js", "styles.css"])
         for filename in result.output["files"]:
             self.assertTrue((project / filename).is_file())
         self.assertIn("Demo Site", (project / "index.html").read_text())
@@ -80,6 +80,27 @@ class WebsiteActionTests(unittest.TestCase):
         self.assertEqual([stage["stage"] for stage in result.output["stages"]], ["create", "build", "test"])
         self.assertTrue((project / "app.webmanifest").is_file())
         self.assertTrue(result.output["evidence"]["checks"]["form_label"])
+
+    def test_builder_composes_requested_functions(self):
+        result = default_fabric().execute(
+            "builder.run",
+            {"kind": "website", "name": "service-site", "title": "Service Site", "description": "Book an appointment and request a quote.", "features": ["booking", "quote_request", "faq"]},
+            self.context,
+        )
+        project = self.workspace / "service-site"
+        page = (project / "index.html").read_text()
+        self.assertEqual(result.output["design"]["features"], ["booking", "quote_request", "faq"])
+        self.assertIn('data-aegis-form="lead"', page)
+        self.assertIn("Questions", page)
+        self.assertIn("localStorage", (project / "script.js").read_text())
+
+    def test_builder_rejects_unapproved_function(self):
+        with self.assertRaises(ActionError):
+            default_fabric().execute(
+                "builder.run",
+                {"kind": "app", "name": "bad-app", "title": "Bad", "description": "Bad", "features": ["run_shell"]},
+                self.context,
+            )
 
 
 if __name__ == "__main__":

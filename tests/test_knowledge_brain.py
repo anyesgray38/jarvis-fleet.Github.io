@@ -12,7 +12,7 @@ class FakeStore:
         self.cache = {}
 
     def ingest_source(self, source, *, kind, manager, department, query):
-        packet = {"id": f"{department}-{len(self.data['sources'])}", "department": department, "kind": kind, "title": source["title"], "query": query}
+        packet = {"id": f"{department}-{len(self.data['sources'])}", "department": department, "kind": kind, "title": source["title"], "query": query, "summary": "compact packet", "reverse_engineering": {"status": "verified_for_compaction"}, "promotion": {"status": "promoted_to_active_memory"}}
         self.data["sources"].append(packet)
         return packet
 
@@ -47,6 +47,7 @@ class KnowledgeBrainTests(unittest.TestCase):
         result = brain.run_due_cycle()
         self.assertEqual(result["status"], "ok")
         self.assertEqual(result["packets"], 2)
+        self.assertEqual(result["pipeline"]["promote"], 2)
         self.assertEqual({item["department"] for item in store.data["sources"]}, {"security"})
         self.assertEqual(brain.due_departments(), [])
         self.assertGreater(store.saved, 0)

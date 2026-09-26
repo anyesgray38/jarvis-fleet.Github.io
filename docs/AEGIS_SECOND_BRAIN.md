@@ -8,10 +8,25 @@ it is never interpreted as an instruction or granted a tool.
 ## Department growth
 
 `config/knowledge_departments.json` defines the inbound research stations.
-Each plan has a manager, Wiki topics, Firecrawl search queries, direct URLs,
-and a cadence. The scheduler runs bounded due-work cycles so one noisy source
-cannot consume the whole research budget. Existing environment topic and URL
-lists are added to Web Intelligence for backward compatibility.
+Each plan has a manager, a designated `search_command`, capability ownership,
+Wiki topics, Firecrawl search queries, direct URLs, and a cadence. The
+scheduler runs bounded due-work cycles so one noisy source cannot consume the
+whole research budget. Existing environment topic and URL lists are added to
+Web Intelligence for backward compatibility.
+
+Every fetched source passes the same learning loop before promotion:
+
+```text
+fetch -> structure -> extract claims -> extract concepts -> verify provenance
+      -> compact -> promote to active memory -> archive full source
+```
+
+The reverse-engineering stage is local and deterministic. It extracts headings,
+claims, concepts, links, code-block signals, fingerprints, and provenance
+metadata without executing source content or treating webpage instructions as
+AEGIS commands. A packet is not promoted when provenance verification fails.
+Each cycle records the stage counts and each promoted packet records its
+pipeline evidence in `reverse_engineering` and `promotion` fields.
 
 ## Retrieval
 

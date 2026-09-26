@@ -32,6 +32,8 @@ class DepartmentPlan:
     topics: tuple[str, ...] = ()
     queries: tuple[str, ...] = ()
     urls: tuple[str, ...] = ()
+    search_command: str = ""
+    capabilities: tuple[str, ...] = ()
     cadence_minutes: int = 360
     enabled: bool = True
 
@@ -47,13 +49,19 @@ def load_department_plans(path: str | Path, *, wiki_topics: list[str] = (), web_
     for item in raw if isinstance(raw, list) else []:
         if not isinstance(item, dict) or not str(item.get("id", "")).strip():
             continue
+        search_command = str(item.get("search_command") or (item.get("queries") or [""])[0]).strip()
+        configured_queries = tuple(str(v).strip() for v in item.get("queries", []) if str(v).strip())
+        if not configured_queries and search_command:
+            configured_queries = (search_command,)
         plans.append(DepartmentPlan(
             department_id=str(item["id"]).strip(),
             name=str(item.get("name") or item["id"]).strip(),
             manager=str(item.get("manager") or "Aegis").strip(),
             topics=tuple(str(v).strip() for v in item.get("topics", []) if str(v).strip()),
-            queries=tuple(str(v).strip() for v in item.get("queries", []) if str(v).strip()),
+            queries=configured_queries,
             urls=tuple(str(v).strip() for v in item.get("urls", []) if str(v).strip()),
+            search_command=search_command,
+            capabilities=tuple(str(v).strip() for v in item.get("capabilities", []) if str(v).strip()),
             cadence_minutes=max(5, int(item.get("cadence_minutes", 360))),
             enabled=bool(item.get("enabled", True)),
         ))
@@ -68,6 +76,8 @@ def load_department_plans(path: str | Path, *, wiki_topics: list[str] = (), web_
             topics=tuple(dict.fromkeys((*first.topics, *wiki_topics))),
             queries=first.queries,
             urls=tuple(dict.fromkeys((*first.urls, *web_sources))),
+            search_command=first.search_command,
+            capabilities=first.capabilities,
             cadence_minutes=first.cadence_minutes,
             enabled=first.enabled,
         )
@@ -153,10 +163,16 @@ class KnowledgeBrain:
         outcomes: list[dict[str, Any]] = []
         errors: list[str] = []
         external_calls = 0
+        pipeline = {"fetch": 0, "reverse_engineer": 0, "verify": 0, "compact": 0, "promote": 0}
         for plan, kind, value in jobs:
             try:
                 if kind == "wiki":
                     packet = self.store.ingest_source(self.wiki_fetcher(value), kind="wiki", manager=plan.manager, department=plan.department_id, query=value)
+                    pipeline["fetch"] += 1
+                    pipeline["reverse_engineer"] += int(bool(packet.get("reverse_engineering")))
+                    pipeline["verify"] += int(packet.get("reverse_engineering", {}).get("status") == "verified_for_compaction")
+                    pipeline["compact"] += int(bool(packet.get("summary")))
+                    pipeline["promote"] += int(packet.get("promotion", {}).get("status") == "promoted_to_active_memory")
                     outcomes.append({"department": plan.department_id, "kind": kind, "value": value, "packet": packet})
                 elif kind == "web":
                     if self.store.source_is_fresh(value, self.source_refresh_minutes):
@@ -165,6 +181,11 @@ class KnowledgeBrain:
                         outcomes.append({"department": plan.department_id, "kind": kind, "value": value, "skipped": "external_call_budget"})
                     else:
                         packet = self.store.ingest_source(self.web_fetcher(value), kind="web", manager=plan.manager, department=plan.department_id, query=value)
+                        pipeline["fetch"] += 1
+                        pipeline["reverse_engineer"] += int(bool(packet.get("reverse_engineering")))
+                        pipeline["verify"] += int(packet.get("reverse_engineering", {}).get("status") == "verified_for_compaction")
+                        pipeline["compact"] += int(bool(packet.get("summary")))
+                        pipeline["promote"] += int(packet.get("promotion", {}).get("status") == "promoted_to_active_memory")
                         external_calls += 1
                         outcomes.append({"department": plan.department_id, "kind": kind, "value": value, "packet": packet})
                 else:
@@ -191,6 +212,11 @@ class KnowledgeBrain:
                             continue
                         try:
                             packet = self.store.ingest_source(self.web_fetcher(url), kind="web", manager=plan.manager, department=plan.department_id, query=value)
+                            pipeline["fetch"] += 1
+                            pipeline["reverse_engineer"] += int(bool(packet.get("reverse_engineering")))
+                            pipeline["verify"] += int(packet.get("reverse_engineering", {}).get("status") == "verified_for_compaction")
+                            pipeline["compact"] += int(bool(packet.get("summary")))
+                            pipeline["promote"] += int(packet.get("promotion", {}).get("status") == "promoted_to_active_memory")
                             external_calls += 1
                             outcomes.append({"department": plan.department_id, "kind": "search", "value": value, "packet": packet})
                             scraped += 1
@@ -207,10 +233,10 @@ class KnowledgeBrain:
                 department = state.setdefault("departments", {}).setdefault(plan.department_id, {})
                 department.update({"last_run_at": completed, "last_status": "degraded" if errors else "ok", "last_error_count": len(errors), "cadence_minutes": plan.cadence_minutes, "manager": plan.manager})
                 department["next_run_at"] = _iso(_now() + timedelta(minutes=plan.cadence_minutes))
-            state.setdefault("cycles", []).append({"cycle_id": cycle_id, "completed_at": completed, "departments": [plan.department_id for plan in plans], "jobs": len(jobs), "packets": len(outcomes), "external_calls": external_calls, "errors": errors[-20:]})
+            state.setdefault("cycles", []).append({"cycle_id": cycle_id, "completed_at": completed, "departments": [plan.department_id for plan in plans], "jobs": len(jobs), "packets": len(outcomes), "external_calls": external_calls, "pipeline": pipeline, "errors": errors[-20:]})
             state["cycles"] = state["cycles"][-100:]
             self.store._save()
-        return {"cycle_id": cycle_id, "status": "degraded" if errors else "ok", "jobs": len(jobs), "packets": len(outcomes), "external_calls": external_calls, "errors": errors, "completed_at": completed}
+        return {"cycle_id": cycle_id, "status": "degraded" if errors else "ok", "jobs": len(jobs), "packets": len(outcomes), "external_calls": external_calls, "pipeline": pipeline, "errors": errors, "completed_at": completed}
 
     def snapshot(self) -> dict[str, Any]:
         with self.store.lock:
@@ -228,6 +254,8 @@ class KnowledgeBrain:
                     "configured_topics": len(plan.topics),
                     "configured_queries": len(plan.queries),
                     "configured_urls": len(plan.urls),
+                    "search_command": plan.search_command,
+                    "capabilities": list(plan.capabilities),
                     "research_inputs": {
                         "topics": list(plan.topics),
                         "queries": list(plan.queries),

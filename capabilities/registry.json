@@ -312,7 +312,7 @@
       "kind": "research",
       "tags": ["knowledge", "firecrawl", "departments", "retrieval"],
       "execution": "internal",
-      "verification": ["bounded_budget", "source_provenance", "change_detection", "failure_recording"]
+      "verification": ["bounded_budget", "source_provenance", "reverse_engineering", "compaction", "promotion_evidence", "change_detection", "failure_recording"]
     },
     {
       "id": "knowledge.local_retrieval",

@@ -530,6 +530,22 @@ h1, h2, h3, p { margin-top: 0; }
 .aegis-roster-row strong,.aegis-roster-row small { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .aegis-roster-row strong { color:#dcebf3; font-size:9px; }
 .aegis-roster-row small { margin-top:3px; color:#718b9d; font-size:7px; }
+.aegis-preview-panel { margin:10px 0; border:1px solid #253746; border-radius:14px; background:linear-gradient(145deg,#0e1923,#0a121b); padding:16px; }
+.aegis-preview-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; }
+.aegis-preview-heading h2 { margin:5px 0 4px; color:#dcebf3; font-size:16px; letter-spacing:.08em; }
+.aegis-preview-heading p { max-width:680px; margin:0; color:#718b9d; font-size:9px; line-height:1.55; }
+.aegis-preview-count { flex:0 0 auto; border:1px solid #31566a; border-radius:999px; padding:6px 9px; color:#8fcddd; font-size:7px; font-weight:800; letter-spacing:.08em; }
+.aegis-preview-layout { display:grid; grid-template-columns:220px minmax(0,1fr); gap:12px; margin-top:14px; }
+.aegis-preview-list { display:grid; align-content:start; gap:6px; }
+.aegis-preview-list button { display:flex; align-items:center; justify-content:space-between; gap:8px; border:1px solid #263d4b; border-radius:8px; background:#0b151f; color:#a9bfca; padding:10px; text-align:left; cursor:pointer; }
+.aegis-preview-list button:hover,.aegis-preview-list button.selected { border-color:#61cddd; background:#102634; }
+.aegis-preview-list strong,.aegis-preview-list small { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.aegis-preview-list strong { font-size:9px; }.aegis-preview-list small { margin-top:3px; color:#688293; font-size:7px; }.aegis-preview-list i { color:#6bd8e7; font-style:normal; font-size:16px; }
+.aegis-preview-frame-wrap { min-width:0; overflow:hidden; border:1px solid #2b4655; border-radius:10px; background:#f7fafc; }
+.aegis-preview-toolbar { display:flex; align-items:center; gap:7px; min-height:30px; padding:0 9px; background:#0c1821; color:#b9ccd8; font-size:8px; }
+.aegis-preview-toolbar a { margin-left:auto; color:#8fcddd; font-size:7px; font-weight:800; text-decoration:none; }
+.aegis-preview-frame { display:block; width:100%; height:430px; border:0; background:#fff; }
+.aegis-preview-empty { margin-top:14px; border:1px dashed #2b4655; border-radius:9px; padding:28px; text-align:center; }
 .aegis-activity { position:relative; }
 .aegis-activity-live { position:absolute; right:14px; top:13px; display:flex; align-items:center; gap:5px; color:#72e8a9; font-size:7px; font-weight:800; }
 .aegis-activity-row { display:grid; grid-template-columns:30px minmax(0,1fr) 45px; gap:5px; border-top:1px solid #1e2e3a; padding:8px 0; color:#607a8d; font-size:7px; }
@@ -546,6 +562,7 @@ h1, h2, h3, p { margin-top: 0; }
   .aegis-sync-panel { display:none; }
   .aegis-agent { min-width:135px; }
   .aegis-bottom-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .aegis-preview-layout { grid-template-columns:1fr; }
 }
 @media (max-width:850px) {
   .aegis-4d-topline { flex-direction:column; }
@@ -575,6 +592,8 @@ h1, h2, h3, p { margin-top: 0; }
   .aegis-agent-detail { bottom:16%; width:92%; flex-direction:column; align-items:stretch; }
   .aegis-detail-actions { justify-content:flex-start; }
   .aegis-bottom-grid { grid-template-columns:1fr; }
+  .aegis-preview-heading { flex-direction:column; }
+  .aegis-preview-frame { height:360px; }
 }
 
 
@@ -734,6 +753,10 @@ h1, h2, h3, p { margin-top: 0; }
 .department-knowledge-card strong { display: block; color: var(--text-soft); font-size: 10px; }
 .department-knowledge-card small, .department-knowledge-card span { color: var(--faint); font-size: 8px; }
 .department-knowledge-card b { grid-row: span 2; color: var(--accent); font-size: 17px; }
+.department-capabilities { grid-column: 1 / -1; line-height: 1.45; }
+.learning-pipeline { display: flex; align-items: center; justify-content: space-between; gap: 18px; border: 1px solid #29445a; border-radius: 10px; background: rgba(13,28,40,.78); padding: 11px 12px; color: var(--muted); font-size: 10px; }
+.learning-pipeline strong { display: block; margin-top: 4px; color: var(--text); font-size: 12px; }
+@media (max-width: 760px) { .learning-pipeline { align-items: flex-start; flex-direction: column; } }
 .local-recall { display: grid; gap: 7px; margin-top: 6px; border-top: 1px solid #203737; padding-top: 10px; }
 .recall-result { display: grid; gap: 3px; border-left: 2px solid var(--accent); background: #0d201e; padding: 7px 8px; }
 .recall-result strong { color: var(--text-soft); font-size: 10px; }
