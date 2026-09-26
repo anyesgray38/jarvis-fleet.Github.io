@@ -1,0 +1,188 @@
+{
+  "source": {
+    "title": "Practical ICT Strategies — 7th Edition",
+    "type": "user-provided PDF",
+    "integration_note": "Structured summary for AEGIS. Preserve distinction between source claims and engine interpretation. Do not treat the book's causal claims as independently verified market facts."
+  },
+  "framework": {
+    "foundation_sequence": ["bias","location","draw","level","time","trigger"],
+    "liquidity_first_interpretation": {
+      "liquidity": "narrative and target",
+      "market_structure": "state",
+      "sweep": "event",
+      "cisd": "early delivery change",
+      "mss": "structural confirmation",
+      "displacement": "intent/force",
+      "pd_array": "entry location",
+      "time": "context/filter",
+      "entry": "execution",
+      "target": "next liquidity"
+    }
+  },
+  "foundations": {
+    "price_delivery": {
+      "source_claims": [
+        "The book frames price as being delivered to seek liquidity and rebalance imbalance.",
+        "Recurring conceptual loop: seek liquidity, sweep, displace, rebalance."
+      ]
+    },
+    "market_structure": {
+      "source_claims": [
+        "Swing hierarchy uses STH/ITH/LTH and STL/ITL/LTL.",
+        "Bullish structure remains intact until a close below the most recent LTL; bearish until a close above the most recent LTH."
+      ]
+    },
+    "mss_cisd": {
+      "source_claims": [
+        "MSS is a displacement break of a relevant swing against trend.",
+        "CISD uses candle delivery and can occur before MSS.",
+        "MSS/CISD are triggers, not standalone strategies.",
+        "MSS following a liquidity sweep is presented as higher quality."
+      ]
+    },
+    "displacement_fvg": {
+      "source_claims": [
+        "Displacement is forceful one-directional movement.",
+        "The book requires meaningful displacement for a valid FVG.",
+        "FVG is a three-candle imbalance and can act as entry location or rebalance target."
+      ]
+    },
+    "premium_discount": {
+      "source_claims": [
+        "A dealing range is split at 50% equilibrium.",
+        "Above equilibrium is premium; below is discount.",
+        "Bullish bias seeks buys in discount; bearish bias seeks sells in premium.",
+        "OTE is 0.62-0.79 with 0.705 sweet spot.",
+        "Consequent Encroachment is the 50% midpoint of a gap/array."
+      ]
+    },
+    "liquidity": {
+      "source_claims": [
+        "BSL rests above old highs; SSL rests below old lows.",
+        "Important pools include previous day/week highs/lows, equal highs/lows, and obvious swing extremes.",
+        "A sweep takes liquidity then reverses; a run takes liquidity and continues.",
+        "ERL is range-edge liquidity; IRL is internal liquidity/inefficiency.",
+        "The book uses ERL→IRL→ERL as a recurring delivery concept."
+      ]
+    },
+    "pd_arrays_blocks": {
+      "source_claims": [
+        "Order Block: last opposing candle before displacement.",
+        "Breaker: failed OB after a liquidity sweep.",
+        "Mitigation Block: failed OB without a liquidity sweep.",
+        "Rejection Block: wick-based zone after a swept extreme.",
+        "Propulsion Block: candle that trades into an OB then launches price.",
+        "Hidden OB: overlapping-wick zone between two same-color candles."
+      ]
+    },
+    "pd_arrays_gaps": {
+      "source_claims": [
+        "SIBI is bearish FVG; BISI is bullish FVG.",
+        "IFVG is a failed FVG that flips and is retested from the opposite side.",
+        "Implied FVG is a hidden imbalance derived from surrounding wicks.",
+        "BPR is overlap of opposing FVGs.",
+        "Volume Imbalance is a body-to-body gap with wick overlap allowed.",
+        "Suspension Block is a candle suspended between two volume imbalances.",
+        "Vacuum Block is an opening gap from a high-volatility event.",
+        "The book prioritizes plain FVG and IFVG over collecting many gap variants."
+      ]
+    },
+    "time_price": {
+      "source_claims": [
+        "The book treats time as a filter for delivery.",
+        "Asian, London, New York, and London Close killzones are emphasized.",
+        "Asian range high/low become later-session liquidity references.",
+        "CBDR is used for projection.",
+        "Macros are short timing windows around the hour.",
+        "NWOG and NDOG are opening-gap references."
+      ]
+    },
+    "top_down": {
+      "source_claims": [
+        "Start high and work down.",
+        "Compare Daily↔H4, H4↔H1, H1↔15m.",
+        "Higher-timeframe context takes precedence.",
+        "Complete routine: Bias → Location → Draw → Level → Time → Trigger.",
+        "If a required step is missing, pass."
+      ]
+    },
+    "daily_bias": {
+      "source_claims": [
+        "Use the most recent Daily MSS as the basic directional bias.",
+        "MSS up = bullish; MSS down = bearish.",
+        "Bullish bias seeks discount PD arrays and upside liquidity; bearish seeks premium PD arrays and downside liquidity.",
+        "The chapter instructs Daily-bias confirmation no lower than 15m."
+      ]
+    }
+  },
+  "strategies": {
+    "ote": {
+      "rules": ["align with bias","measure established directional leg","wait for 0.62-0.79 retracement","prefer 0.705 and PDA confluence","confirm with MSS/CISD","stop beyond leg origin","target swing extreme/extensions/next liquidity"],
+      "interpretation": "precision entry-location model, not directional narrative"
+    },
+    "order_block": {
+      "rules": ["align with daily bias","use correct premium/discount","identify last opposing candle before displacement","prefer clean displacement and FVG","wait for retest","confirm lower timeframe shift","stop beyond block","target next liquidity"]
+    },
+    "turtle_soup": {
+      "rules": ["best in a clear range","wait for sweep of obvious high/low","prefer no clean body close beyond range","confirm rejection with MSS/CISD","enter reversal/retest","stop beyond sweep wick","target opposite range liquidity"],
+      "interpretation": "explicit liquidity-sweep reversal model"
+    },
+    "silver_bullet": {"summary": "One-hour, time-based FVG scalp with three daily windows."},
+    "judas_swing": {"summary": "False initial move against the intended distribution; later integrated into AMD/Power of 3."},
+    "power_of_3": {
+      "phases": ["accumulation","manipulation","distribution"],
+      "rules": ["bullish day manipulates down then distributes up","bearish day manipulates up then distributes down","wait during accumulation","do not chase manipulation","participate in confirmed distribution"]
+    },
+    "unicorn_smt": {
+      "unicorn": "overlap of a breaker block and an FVG",
+      "smt": "correlated assets fail to confirm one another"
+    },
+    "market_maker_models": {"summary": "Market Maker Buy/Sell Models are full-cycle four-phase templates."},
+    "weekly_intraday_profiles": {"summary": "Session/week profile models including TGIF Friday retracement idea."},
+    "session_scalping": {"summary": "Asian-range and session-based scalping model."},
+    "low_frequency_swing": {"summary": "One-trade/one-shot style swing framework."},
+    "bread_butter": {
+      "summary": "Symmetrical intraday model using Offset and Re-pricing engines across London, New York, London Close, and Asia sessions.",
+      "engines": ["Offset-Accumulation/Distribution","Re-Accumulation/Distribution"]
+    },
+    "full_intraday": {"summary": "Combines day-level session logic and delivery into a full intraday framework."},
+    "venom": {"summary": "2025 NY-open indices model built on a 90-minute range sweep."},
+    "advanced_pd_arrays": {
+      "concepts": ["1st Presented FVG","IOFED","Reaper IFVG","Enigma FVG","Reversal Sequence"]
+    }
+  },
+  "execution_risk": {
+    "source_claims": [
+      "Part 3 covers trading plan/routine, risk management and position sizing, psychology/discipline/journaling, and backtesting/deliberate practice.",
+      "The book recommends mastering one model and backtesting fifty setups before moving on.",
+      "Risk, psychology, and backtesting are presented as non-optional."
+    ],
+    "engine_policy": [
+      "All ICT strategies remain research_only until independently backtested.",
+      "No source-derived rule should bypass AEGIS risk policy.",
+      "Record strategy id, bias, location, draw, level, time, trigger, invalidation, target, and outcome for every test."
+    ]
+  },
+  "glossary": {
+    "BSL":"Buy-Side Liquidity",
+    "SSL":"Sell-Side Liquidity",
+    "ERL":"External Range Liquidity",
+    "IRL":"Internal Range Liquidity",
+    "MSS":"Market Structure Shift",
+    "CISD":"Change in State of Delivery",
+    "FVG":"Fair Value Gap",
+    "BISI":"Buy-side Imbalance, Sell-side Inefficiency",
+    "SIBI":"Sell-side Imbalance, Buy-side Inefficiency",
+    "IFVG":"Inverted Fair Value Gap",
+    "BPR":"Balanced Price Range",
+    "OB":"Order Block",
+    "OTE":"Optimal Trade Entry",
+    "PDH":"Previous Day High",
+    "PDL":"Previous Day Low",
+    "NWOG":"New Week Opening Gap",
+    "NDOG":"New Day Opening Gap",
+    "SMT":"Smart Money Technique divergence",
+    "MMBM":"Market Maker Buy Model",
+    "MMSM":"Market Maker Sell Model"
+  }
+}

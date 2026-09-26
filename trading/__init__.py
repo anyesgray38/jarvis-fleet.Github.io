@@ -10,6 +10,7 @@ from .paper import PaperBroker
 from .universe import AssetClass, Instrument, MarketRegime, DEFAULT_UNIVERSE, find_instruments
 from .strategies import StrategySpec, STRATEGY_CATALOG, find_strategies
 from .research import ResearchTarget, TradingResearchPlanner
+from .ict_knowledge import load_ict_knowledge, foundation_sequence, strategy_rules, liquidity_first_roles
 
 __all__ = [
     "AssetClass", "BacktestReport", "Backtester", "BotState", "Candle",
@@ -17,5 +18,6 @@ __all__ = [
     "OrderIntent", "PaperBroker", "Position", "ResearchTarget", "RiskDecision",
     "RiskPolicy", "SMCAnalyzer", "Signal", "StrategySpec", "STRATEGY_CATALOG",
     "TradeResult", "TradingBot", "TradingBotFleet", "TradingResearchPlanner",
-    "find_instruments", "find_strategies",
+    "find_instruments", "find_strategies", "load_ict_knowledge",
+    "foundation_sequence", "strategy_rules", "liquidity_first_roles",
 ]
