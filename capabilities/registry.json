@@ -282,53 +282,20 @@
       ]
     },
     {
-      "id": "security.web_assessment",
+      "id": "knowledge.research_cycle",
       "provider": "aegis",
-      "kind": "security",
-      "tags": [
-        "security",
-        "assessment",
-        "http"
-      ],
+      "kind": "research",
+      "tags": ["knowledge", "firecrawl", "departments", "retrieval"],
       "execution": "internal",
-      "verification": [
-        "evidence",
-        "scope_check",
-        "independent_verification",
-        "self_audit"
-      ]
+      "verification": ["bounded_budget", "source_provenance", "change_detection", "failure_recording"]
     },
     {
-      "id": "security.reconnaissance",
+      "id": "knowledge.local_retrieval",
       "provider": "aegis",
-      "kind": "security",
-      "tags": [
-        "security",
-        "reconnaissance",
-        "scope"
-      ],
+      "kind": "retrieval",
+      "tags": ["knowledge", "memory", "local", "evidence"],
       "execution": "internal",
-      "verification": [
-        "evidence",
-        "scope_check",
-        "self_audit"
-      ]
-    },
-    {
-      "id": "security.finding_validation",
-      "provider": "aegis",
-      "kind": "security",
-      "tags": [
-        "security",
-        "validation",
-        "false_positive"
-      ],
-      "execution": "internal",
-      "verification": [
-        "independent_verification",
-        "evidence",
-        "self_audit"
-      ]
+      "verification": ["authentication", "department_scope", "archive_boundary"]
     },
     {
       "id": "logistics.route_plan",

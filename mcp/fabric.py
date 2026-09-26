@@ -66,10 +66,12 @@ class McpCapabilityFabric:
         self._servers[server_id] = RegisteredServer(spec=dict(spec), client=client)
         self._record("mcp.registered", server_id, {"transport": transport})
 
-    def discover(self, server_id: str, *, scanner: str | None = None, timeout: float = 15.0) -> AdmissionDecision:
+    def discover(self, server_id: str, *, scanner: str | None = None, timeout: float = 15.0, allowed_tools: set[str] | None = None) -> AdmissionDecision:
         server = self._get(server_id)
         discovery = server.client.discover(timeout=timeout)
         tools = server.client.list_tools(timeout=timeout)
+        if allowed_tools is not None:
+            tools = [tool for tool in tools if str(tool.get("name", "")) in allowed_tools]
         decision = self.admission.inspect({**server.spec, "discovery": discovery}, tools, scanner=scanner)
         server.tools = tools
         server.admission = decision

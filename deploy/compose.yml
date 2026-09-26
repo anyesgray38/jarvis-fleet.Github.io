@@ -29,6 +29,34 @@ services:
       retries: 5
       start_period: 10s
 
+  local-agent:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.python
+    network_mode: host
+    working_dir: /workspace
+    command: >-
+      sh -c 'exec python3 agent.py --host 127.0.0.1 --port 4444
+      --secret "$AEGIS_FLEET_SECRET" --cert /run/aegis/server.crt --reconnect 5'
+    environment:
+      AEGIS_FLEET_SECRET: ${AEGIS_FLEET_SECRET:?Set AEGIS_FLEET_SECRET}
+      AEGIS_AGENT_NAME: ${AEGIS_AGENT_NAME:-Aegis Local Worker}
+      AEGIS_AGENT_TAGS: ${AEGIS_AGENT_TAGS:-local,research,knowledge,security,code-factory,business-prospecting,maintenance}
+      USER: aegis-local
+      PYTHONUNBUFFERED: "1"
+    user: "${AEGIS_AGENT_UID:-1000}:${AEGIS_AGENT_GID:-1000}"
+    volumes:
+      - aegis-certs:/run/aegis:ro
+      - ..:/workspace
+    depends_on:
+      orchestrator:
+        condition: service_healthy
+    mem_limit: 256m
+    cpus: 0.5
+    pids_limit: 64
+    init: true
+    restart: unless-stopped
+
   gateway:
     build:
       context: ..
@@ -68,10 +96,17 @@ services:
       AEGIS_KNOWLEDGE_PORT: 8892
       AEGIS_KNOWLEDGE_DATA: /app/knowledge-data
       AEGIS_KNOWLEDGE_INTERVAL_MINUTES: ${AEGIS_KNOWLEDGE_INTERVAL_MINUTES:-360}
+      AEGIS_KNOWLEDGE_RESEARCH_ENABLED: ${AEGIS_KNOWLEDGE_RESEARCH_ENABLED:-1}
+      AEGIS_KNOWLEDGE_MAX_JOBS_PER_CYCLE: ${AEGIS_KNOWLEDGE_MAX_JOBS_PER_CYCLE:-4}
+      AEGIS_KNOWLEDGE_MAX_SEARCH_RESULTS: ${AEGIS_KNOWLEDGE_MAX_SEARCH_RESULTS:-3}
+      AEGIS_KNOWLEDGE_MAX_EXTERNAL_CALLS: ${AEGIS_KNOWLEDGE_MAX_EXTERNAL_CALLS:-4}
+      AEGIS_KNOWLEDGE_SOURCE_REFRESH_MINUTES: ${AEGIS_KNOWLEDGE_SOURCE_REFRESH_MINUTES:-1440}
+      AEGIS_KNOWLEDGE_DEPARTMENTS_CONFIG: ${AEGIS_KNOWLEDGE_DEPARTMENTS_CONFIG:-/app/config/knowledge_departments.json}
       AEGIS_KNOWLEDGE_WIKI_TOPICS: ${AEGIS_KNOWLEDGE_WIKI_TOPICS:-}
       AEGIS_KNOWLEDGE_WEB_SOURCES: ${AEGIS_KNOWLEDGE_WEB_SOURCES:-}
       FIRECRAWL_API_KEY: ${FIRECRAWL_API_KEY:-}
       FIRECRAWL_OAUTH_TOKEN: ${FIRECRAWL_OAUTH_TOKEN:-}
+      FIRECRAWL_AUTHORIZATION: ${FIRECRAWL_AUTHORIZATION:-}
       FIRECRAWL_MCP_URL: ${FIRECRAWL_MCP_URL:-https://mcp.firecrawl.dev/v2/mcp}
       PYTHONUNBUFFERED: "1"
     volumes:
@@ -102,6 +137,7 @@ services:
       AEGIS_PROSPECT_SOURCE_URLS: ${AEGIS_PROSPECT_SOURCE_URLS:-}
       FIRECRAWL_API_KEY: ${FIRECRAWL_API_KEY:-}
       FIRECRAWL_OAUTH_TOKEN: ${FIRECRAWL_OAUTH_TOKEN:-}
+      FIRECRAWL_AUTHORIZATION: ${FIRECRAWL_AUTHORIZATION:-}
       FIRECRAWL_MCP_URL: ${FIRECRAWL_MCP_URL:-https://mcp.firecrawl.dev/v2/mcp}
       PYTHONUNBUFFERED: "1"
     volumes:

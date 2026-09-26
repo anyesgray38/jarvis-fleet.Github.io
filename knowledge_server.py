@@ -15,9 +15,10 @@ import time
 from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import quote, urlencode
+from urllib.parse import parse_qs, quote, urlencode
 from urllib.request import Request, urlopen
 
+from knowledge.brain import KnowledgeBrain, load_department_plans
 from mcp.firecrawl import FirecrawlMcpAdapter
 
 BIND = os.environ.get("AEGIS_KNOWLEDGE_BIND", "127.0.0.1")
@@ -30,10 +31,17 @@ MAX_BODY = 32 * 1024
 REQUEST_TIMEOUT = 20
 FIRECRAWL_KEY = os.environ.get("FIRECRAWL_API_KEY", "")
 FIRECRAWL_OAUTH_TOKEN = os.environ.get("FIRECRAWL_OAUTH_TOKEN", "")
+FIRECRAWL_AUTHORIZATION = os.environ.get("FIRECRAWL_AUTHORIZATION", "")
 FIRECRAWL_MCP_URL = os.environ.get("FIRECRAWL_MCP_URL", "https://mcp.firecrawl.dev/v2/mcp")
 WIKI_TOPICS = [item.strip() for item in os.environ.get("AEGIS_KNOWLEDGE_WIKI_TOPICS", "").split(",") if item.strip()]
 WEB_SOURCES = [item.strip() for item in os.environ.get("AEGIS_KNOWLEDGE_WEB_SOURCES", "").split(",") if item.strip()]
 INTERVAL_MINUTES = max(5, int(os.environ.get("AEGIS_KNOWLEDGE_INTERVAL_MINUTES", "360")))
+RESEARCH_ENABLED = os.environ.get("AEGIS_KNOWLEDGE_RESEARCH_ENABLED", "1").lower() not in {"0", "false", "no", "off"}
+MAX_JOBS_PER_CYCLE = max(1, int(os.environ.get("AEGIS_KNOWLEDGE_MAX_JOBS_PER_CYCLE", "4")))
+MAX_SEARCH_RESULTS = max(1, int(os.environ.get("AEGIS_KNOWLEDGE_MAX_SEARCH_RESULTS", "3")))
+MAX_EXTERNAL_CALLS = max(1, int(os.environ.get("AEGIS_KNOWLEDGE_MAX_EXTERNAL_CALLS", "4")))
+SOURCE_REFRESH_MINUTES = max(30, int(os.environ.get("AEGIS_KNOWLEDGE_SOURCE_REFRESH_MINUTES", "1440")))
+DEPARTMENTS_CONFIG = os.environ.get("AEGIS_KNOWLEDGE_DEPARTMENTS_CONFIG", str(Path(__file__).resolve().parent / "config" / "knowledge_departments.json"))
 
 
 def utc_now() -> str:
@@ -146,7 +154,7 @@ class KnowledgeStore:
                 "wikipedia": True,
                 "firecrawl": bool(FIRECRAWL_MCP_URL),
                 "firecrawl_mcp": bool(FIRECRAWL_MCP_URL),
-                "firecrawl_authenticated": bool(FIRECRAWL_KEY or FIRECRAWL_OAUTH_TOKEN),
+                "firecrawl_authenticated": bool(FIRECRAWL_KEY or FIRECRAWL_OAUTH_TOKEN or FIRECRAWL_AUTHORIZATION),
             },
             "metrics": {
                 "sources_ingested": len(sources),
@@ -158,6 +166,8 @@ class KnowledgeStore:
             },
             "sources": sorted(sources, key=lambda item: item.get("updated_at", ""), reverse=True)[:30],
             "events": sorted(events, key=lambda item: item.get("created_at", ""), reverse=True)[:20],
+            "departments": BRAIN.snapshot()["departments"] if "BRAIN" in globals() else [],
+            "research": BRAIN.snapshot()["research"] if "BRAIN" in globals() else {"due_departments": [], "cycles": []},
             "fetchedAt": utc_now(),
             "error": None,
         }
@@ -169,11 +179,17 @@ class KnowledgeStore:
             source = firecrawl_source(value)
         else:
             raise ValueError("kind must be wiki or web")
+        return self.ingest_source(source, kind=kind, manager=manager, department="web-intelligence", query=value)
+
+    def ingest_source(self, source: dict, *, kind: str, manager: str, department: str, query: str = "") -> dict:
+        if not str(source.get("content", "")).strip():
+            raise ValueError("source content is empty")
         content = str(source["content"])
         source_id = hashlib.sha256(f"{source['provider']}|{source['url']}".encode("utf-8")).hexdigest()[:16]
         archive_path = ARCHIVE_ROOT / f"{source_id}.md"
         archive_path.write_text(content, encoding="utf-8")
         created_at = utc_now()
+        content_hash = hashlib.sha256(content.encode("utf-8", errors="replace")).hexdigest()
         packet = {
             "id": source_id,
             "kind": kind,
@@ -181,8 +197,11 @@ class KnowledgeStore:
             "title": str(source["title"]),
             "url": str(source["url"]),
             "manager": manager or ("Scribe" if kind == "wiki" else "Atlas"),
+            "department": department or "web-intelligence",
+            "research_query": query,
             "summary": distill(content),
             "word_count": len(content.split()),
+            "content_hash": content_hash,
             "archive_path": str(archive_path.relative_to(DATA_ROOT)),
             "updated_at": created_at,
             "full_source_available": True,
@@ -190,23 +209,80 @@ class KnowledgeStore:
         with self.lock:
             sources = self.data.setdefault("sources", [])
             previous = next((item for item in sources if item.get("id") == source_id), None)
+            changed = bool(previous and previous.get("content_hash") != content_hash)
             if previous:
                 packet["first_seen"] = previous.get("first_seen", created_at)
+                packet["version"] = int(previous.get("version", 1)) + (1 if changed else 0)
                 sources[:] = [item for item in sources if item.get("id") != source_id]
             else:
                 packet["first_seen"] = created_at
+                packet["version"] = 1
             sources.append(packet)
-            self.data.setdefault("events", []).append({
-                "type": "source_ingested",
-                "source_id": source_id,
-                "title": packet["title"],
-                "provider": packet["provider"],
-                "manager": packet["manager"],
-                "created_at": created_at,
-            })
+            if not previous or changed:
+                self.data.setdefault("events", []).append({
+                    "type": "source_changed" if previous else "source_ingested",
+                    "source_id": source_id,
+                    "title": packet["title"],
+                    "provider": packet["provider"],
+                    "manager": packet["manager"],
+                    "department": packet["department"],
+                    "version": packet["version"],
+                    "created_at": created_at,
+                })
             self.data["events"] = self.data["events"][-500:]
             self._save()
         return packet
+
+    def search(self, query: str, *, department: str = "", limit: int = 8, include_content: bool = False) -> list[dict]:
+        """Search active local packets; full archives are opt-in and bounded."""
+        terms = {term.lower() for term in re.findall(r"[a-z0-9]{3,}", query.lower())}
+        if not terms:
+            return []
+        with self.lock:
+            candidates = list(self.data.get("sources", []))
+        ranked: list[tuple[int, dict]] = []
+        for source in candidates:
+            if department and source.get("department") != department:
+                continue
+            haystack = " ".join(str(source.get(key, "")) for key in ("title", "summary", "research_query", "department")).lower()
+            score = sum(1 for term in terms if term in haystack)
+            if not score:
+                continue
+            item = dict(source)
+            item["relevance"] = score
+            if include_content:
+                archive = DATA_ROOT / str(source.get("archive_path", ""))
+                if archive.resolve().is_relative_to(DATA_ROOT.resolve()) and archive.exists():
+                    item["content"] = archive.read_text(encoding="utf-8")[:200_000]
+            ranked.append((score, item))
+        ranked.sort(key=lambda pair: (pair[0], pair[1].get("updated_at", "")), reverse=True)
+        return [item for _, item in ranked[: max(1, min(50, int(limit)))]]
+
+    def source_is_fresh(self, url: str, refresh_minutes: int) -> bool:
+        cutoff = datetime.now(timezone.utc) - timedelta(minutes=max(30, int(refresh_minutes)))
+        with self.lock:
+            source = next((item for item in self.data.get("sources", []) if item.get("url") == url), None)
+        return bool(source and _parse_time(source.get("updated_at")) >= cutoff)
+
+    def cached_search(self, query: str, ttl_minutes: int) -> list[dict] | None:
+        with self.lock:
+            item = self.data.setdefault("research", {}).setdefault("search_cache", {}).get(query)
+        if not isinstance(item, dict) or _parse_time(item.get("cached_at")) < datetime.now(timezone.utc) - timedelta(minutes=max(30, int(ttl_minutes))):
+            return None
+        hits = item.get("hits", [])
+        return hits if isinstance(hits, list) else None
+
+    def cache_search(self, query: str, hits: list[dict]) -> None:
+        if not hits:
+            return
+        with self.lock:
+            research = self.data.setdefault("research", {})
+            cache = research.setdefault("search_cache", {})
+            cache[query] = {"cached_at": utc_now(), "hits": [hit for hit in hits if isinstance(hit, dict)][:20]}
+            if len(cache) > 200:
+                for key in sorted(cache, key=lambda value: cache[value].get("cached_at", ""))[:-200]:
+                    cache.pop(key, None)
+            self._save()
 
 
 def _parse_time(value: str | None) -> datetime:
@@ -217,6 +293,24 @@ def _parse_time(value: str | None) -> datetime:
 
 
 STORE = KnowledgeStore()
+PLANS = load_department_plans(DEPARTMENTS_CONFIG, wiki_topics=WIKI_TOPICS, web_sources=WEB_SOURCES)
+
+
+def search_firecrawl(query: str, limit: int) -> list[dict]:
+    return FIRECRAWL.search(query, limit=limit)
+
+
+BRAIN = KnowledgeBrain(
+    STORE,
+    plans=PLANS,
+    wiki_fetcher=wiki_source,
+    web_fetcher=firecrawl_source,
+    web_searcher=search_firecrawl,
+    max_jobs_per_cycle=MAX_JOBS_PER_CYCLE,
+    max_search_results=MAX_SEARCH_RESULTS,
+    max_external_calls=MAX_EXTERNAL_CALLS,
+    source_refresh_minutes=SOURCE_REFRESH_MINUTES,
+)
 
 
 def authorized(handler: BaseHTTPRequestHandler) -> bool:
@@ -256,9 +350,23 @@ class Handler(BaseHTTPRequestHandler):
                 except Exception:
                     pass
                 provider_status = FIRECRAWL.status()
-            self.send_json(200, {"ok": True, "service": "aegis-knowledge-runtime", "providers": {"wikipedia": True, "firecrawl": bool(FIRECRAWL_MCP_URL), "firecrawl_authenticated": bool(FIRECRAWL_KEY or FIRECRAWL_OAUTH_TOKEN)}, "firecrawl_mcp": provider_status})
+            self.send_json(200, {"ok": True, "service": "aegis-knowledge-runtime", "providers": {"wikipedia": True, "firecrawl": bool(FIRECRAWL_MCP_URL), "firecrawl_authenticated": bool(FIRECRAWL_KEY or FIRECRAWL_OAUTH_TOKEN or FIRECRAWL_AUTHORIZATION)}, "firecrawl_mcp": provider_status, "research": {"enabled": RESEARCH_ENABLED, "interval_minutes": INTERVAL_MINUTES, "due_departments": BRAIN.due_departments()}})
         elif path == "/snapshot":
             self.send_json(200, STORE.snapshot())
+        elif path == "/search":
+            params = {key: values[-1] for key, values in parse_qs(query, keep_blank_values=True).items()}
+            search_query = params.get("q", "").strip()
+            if not search_query or len(search_query) > 500:
+                self.send_json(400, {"ok": False, "error": "q is required and must be <= 500 characters"})
+                return
+            try:
+                limit = int(params.get("limit", "8"))
+            except ValueError:
+                limit = 8
+            include_content = params.get("full", "0").lower() in {"1", "true", "yes"}
+            self.send_json(200, {"ok": True, "query": search_query, "department": params.get("department", ""), "results": STORE.search(search_query, department=params.get("department", ""), limit=limit, include_content=include_content)})
+        elif path == "/departments":
+            self.send_json(200, {"ok": True, **BRAIN.snapshot()})
         elif path.startswith("/source/"):
             source_id = path.rsplit("/", 1)[-1]
             if not re.fullmatch(r"[0-9a-f]{16}", source_id):
@@ -275,8 +383,17 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
         if not self.guard():
             return
-        if self.path.split("?", 1)[0] != "/ingest":
+        path = self.path.split("?", 1)[0]
+        if path not in {"/ingest", "/research"}:
             self.send_json(404, {"ok": False, "error": "not found"})
+            return
+        if path == "/research":
+            try:
+                body = json.loads(self.rfile.read(min(MAX_BODY, int(self.headers.get("Content-Length", "0")))).decode("utf-8") or "{}")
+                result = BRAIN.run_due_cycle(force=bool(body.get("force", False))) if RESEARCH_ENABLED else {"status": "disabled", "jobs": 0, "packets": 0, "errors": []}
+                self.send_json(200, {"ok": result.get("status") in {"ok", "degraded", "already_running", "disabled"}, "result": result, "snapshot": STORE.snapshot()})
+            except Exception as error:
+                self.send_json(400, {"ok": False, "error": str(error)})
             return
         try:
             size = int(self.headers.get("Content-Length", "0"))
@@ -294,17 +411,9 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def run_scheduled_intake() -> None:
-    for topic in WIKI_TOPICS:
-        try:
-            STORE.ingest("wiki", topic, "Scribe")
-        except Exception:
-            continue
-    if FIRECRAWL_KEY:
-        for url in WEB_SOURCES:
-            try:
-                STORE.ingest("web", url, "Atlas")
-            except Exception:
-                continue
+    if not RESEARCH_ENABLED:
+        return
+    BRAIN.run_due_cycle()
 
 
 def scheduled_intake() -> None:

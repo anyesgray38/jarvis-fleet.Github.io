@@ -25,7 +25,7 @@ class FirecrawlMcpAdapter:
         max_risk_score: float = 35.0,
     ) -> None:
         self.url = url or os.environ.get("FIRECRAWL_MCP_URL", "https://mcp.firecrawl.dev/v2/mcp")
-        self.credential = oauth_token or api_key or os.environ.get("FIRECRAWL_OAUTH_TOKEN", "") or os.environ.get("FIRECRAWL_API_KEY", "")
+        self.credential = oauth_token or api_key or os.environ.get("FIRECRAWL_OAUTH_TOKEN", "") or os.environ.get("FIRECRAWL_API_KEY", "") or os.environ.get("FIRECRAWL_AUTHORIZATION", "")
         self.fabric = McpCapabilityFabric(admission=AdmissionController(max_risk_score=max_risk_score))
         self.ready = False
         self.error: str | None = None
@@ -33,7 +33,10 @@ class FirecrawlMcpAdapter:
     def ensure(self) -> None:
         if self.ready:
             return
-        headers = {"Authorization": f"Bearer {self.credential}"} if self.credential else {}
+        if self.credential.startswith("Bearer "):
+            headers = {"Authorization": self.credential}
+        else:
+            headers = {"Authorization": f"Bearer {self.credential}"} if self.credential else {}
         self.fabric.register({
             "id": "mcp.firecrawl",
             "name": "Firecrawl MCP Server",
@@ -44,7 +47,7 @@ class FirecrawlMcpAdapter:
             "headers": headers,
         })
         try:
-            decision = self.fabric.discover("mcp.firecrawl", timeout=25.0)
+            decision = self.fabric.discover("mcp.firecrawl", timeout=25.0, allowed_tools=self.ALLOWED_TOOLS)
         except Exception as exc:
             self.error = str(exc)
             raise
@@ -117,3 +120,4 @@ class FirecrawlMcpAdapter:
         data = self._text_payload(self.invoke("firecrawl_search", arguments))
         rows = data.get("data", {}).get("web", [])
         return [row for row in rows if isinstance(row, dict) and isinstance(row.get("url"), str)]
+    ALLOWED_TOOLS = {"firecrawl_search", "firecrawl_scrape"}

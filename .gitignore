@@ -2,3 +2,5 @@ __pycache__/
 *.pyc
 *.log
 .jarvis/
+deploy/.env
+actions-runner/

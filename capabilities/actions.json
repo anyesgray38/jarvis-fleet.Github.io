@@ -83,6 +83,20 @@
       "execution": "agent",
       "status": "policy_gated",
       "verification": ["verified_facts", "path_containment", "build_validation", "browser_check"]
+    },
+    {
+      "id": "knowledge.research_cycle",
+      "risk": "external",
+      "execution": "agent",
+      "status": "policy_gated",
+      "verification": ["bounded_budget", "source_provenance", "change_detection", "failure_recording"]
+    },
+    {
+      "id": "knowledge.local_retrieval",
+      "risk": "read",
+      "execution": "agent",
+      "status": "policy_gated",
+      "verification": ["authentication", "department_scope", "archive_boundary"]
     }
   ]
 }

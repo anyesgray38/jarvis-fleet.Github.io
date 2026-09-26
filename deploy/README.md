@@ -21,6 +21,9 @@ This deployment keeps the AEGIS control plane private by default. The web applic
      orchestrator                  model-runtime
              |
              +--> fleet TLS :4444
+             ^
+             |
+       local governed worker
 
      localhost:8892
      knowledge-runtime
@@ -88,11 +91,13 @@ python3 -m jarvis business-scan "US-19 Thomaston Georgia" --max-results 10 --gen
 
 The workflow records corridor evidence, normalizes duplicates, researches public websites and social profiles, audits observable HTML characteristics, assigns an explainable digital-opportunity score, and generates private concept pages only for qualified records. If Firecrawl MCP is unavailable or rate-limited, it falls back to bounded direct HTTP search/scraping where possible and reports the degradation; an empty fallback is never treated as proof that a website does not exist. Configure `AEGIS_PROSPECT_SOURCE_URLS` for known public municipal/chamber directories. Concept pages are explicitly marked as private demonstrations and are not published or sent to businesses automatically.
 
-The knowledge runtime binds to localhost on port `8892`. Wikipedia search works without an external key. Firecrawl web intake uses the admitted official MCP endpoint; keyless use is bounded, while `FIRECRAWL_API_KEY` or `FIRECRAWL_OAUTH_TOKEN` can be set in the untracked `deploy/.env` for authenticated limits. Credentials are never sent to browser JavaScript. Configure comma-separated `AEGIS_KNOWLEDGE_WIKI_TOPICS` and `AEGIS_KNOWLEDGE_WEB_SOURCES` for startup and recurring intake.
+The knowledge runtime binds to localhost on port `8892`. Wikipedia search works without an external key. Firecrawl web intake uses the admitted official MCP endpoint; keyless use is bounded, while `FIRECRAWL_API_KEY` or `FIRECRAWL_OAUTH_TOKEN` can be set in the untracked `deploy/.env` for authenticated limits. Credentials are never sent to browser JavaScript. Department research policy lives in `config/knowledge_departments.json`; the runtime performs bounded due-work cycles, stores compact packets locally, archives full source text, and exposes authenticated `/search`, `/departments`, and `/research` endpoints. Legacy comma-separated `AEGIS_KNOWLEDGE_WIKI_TOPICS` and `AEGIS_KNOWLEDGE_WEB_SOURCES` are routed into Web Intelligence.
 
 Knowledge is stored in the persistent `aegis-knowledge` volume. Active memory keeps compact distilled packets and metadata; full source text is archived separately and can only be retrieved through the authenticated knowledge service when needed.
 
 The fleet listener uses port `4444`. If host firewall rules are enabled, allow it only on the Tailscale interface for trusted AEGIS fleet nodes.
+
+The Compose deployment includes a non-root local worker connected to the fleet listener. It runs with `AEGIS_AGENT_UID`/`AEGIS_AGENT_GID`, has the repository mounted at `/workspace`, and is the execution node for governed dashboard tasks. Additional remote workers can connect with `agent.py` using the fleet certificate and secret.
 
 ## Model strategy
 

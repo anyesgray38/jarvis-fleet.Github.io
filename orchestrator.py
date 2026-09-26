@@ -87,10 +87,17 @@ class AgentSession:
         self.addr = addr
         self.id = agent_id
         self.info = info
+        self.info['designated_name'] = self.info.get('designated_name') or self._fallback_name(agent_id)
         self.connected_at = datetime.now()
-        self.tags: set[str] = set()
+        self.tags: set[str] = {str(tag).strip() for tag in info.get('tags', []) if str(tag).strip()}
         self._lock = threading.Lock()
         self.alive = True
+
+    def _fallback_name(self, agent_id):
+        hostname = str(self.info.get('hostname') or '').replace('-', ' ').replace('_', ' ').strip()
+        if hostname:
+            return f'{hostname.title()} Worker'
+        return f'Agent {agent_id:02d}'
 
     def shell(self, cmd: str) -> dict:
         with self._lock:
@@ -149,6 +156,7 @@ class AgentSession:
             'ip': self.addr[0],
             'port': self.addr[1],
             'hostname': self.info.get('hostname', '?'),
+            'designated_name': self.info.get('designated_name', f'Agent {self.id:02d}'),
             'user': self.info.get('user', '?'),
             'os': self.info.get('os', '?'),
             'cwd': self.info.get('cwd', '?'),

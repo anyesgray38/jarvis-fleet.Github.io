@@ -25,8 +25,10 @@ async function request(path: string, init?: RequestInit) {
   }
 }
 
-export async function GET() {
-  const result = await request('/snapshot')
+export async function GET(req: Request) {
+  const url = new URL(req.url)
+  const path = url.searchParams.has('q') ? `/search?${url.searchParams.toString()}` : url.searchParams.get('departments') === '1' ? '/departments' : '/snapshot'
+  const result = await request(path)
   return NextResponse.json(result.data, { status: result.ok ? 200 : result.status || 503 })
 }
 
@@ -40,4 +42,3 @@ export async function POST(req: Request) {
   const result = await request('/ingest', { method: 'POST', body: JSON.stringify(body) })
   return NextResponse.json(result.data, { status: result.ok ? 200 : result.status || 503 })
 }
-

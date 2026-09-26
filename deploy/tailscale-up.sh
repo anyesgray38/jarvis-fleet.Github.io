@@ -16,6 +16,13 @@ if [[ ! -f deploy/.env ]]; then
   cp deploy/.env.example deploy/.env
 fi
 
+if ! grep -q '^AEGIS_AGENT_UID=' deploy/.env; then
+  printf '\nAEGIS_AGENT_UID=%s\n' "$(id -u)" >> deploy/.env
+fi
+if ! grep -q '^AEGIS_AGENT_GID=' deploy/.env; then
+  printf 'AEGIS_AGENT_GID=%s\n' "$(id -g)" >> deploy/.env
+fi
+
 # The dashboard talks to the orchestrator only through this loopback gateway.
 if ! grep -q '^AEGIS_GATEWAY_TOKEN=' deploy/.env \
   || grep -Eq '^AEGIS_GATEWAY_TOKEN=(|replace-with-a-different-long-random-secret)$' deploy/.env; then

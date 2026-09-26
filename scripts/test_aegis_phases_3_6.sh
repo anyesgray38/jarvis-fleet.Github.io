@@ -21,8 +21,9 @@ fi
 
 echo "[4/4] Control center source checks"
 test -f web/app/components/AegisChat.tsx
-test -f web/app/components/PentestChat.tsx
 test -f web/app/api/chat/route.ts
-test -f web/app/api/pentest/route.ts
+test ! -e web/app/components/PentestChat.tsx
+test ! -e web/app/components/PentestConsole.tsx
+test ! -e web/app/api/pentest/route.ts
 
 echo "AEGIS phases 3-6 build checks complete."

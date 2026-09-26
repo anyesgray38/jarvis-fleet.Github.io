@@ -74,6 +74,11 @@ def build_parser()->argparse.ArgumentParser:
     plist=pp.add_parser("list",help="list stored prospects");plist.add_argument("--min-score",type=int,default=0);plist.add_argument("--limit",type=int,default=100)
     pshow=pp.add_parser("show",help="show one stored prospect");pshow.add_argument("business_id")
     pbuild=pp.add_parser("build",help="generate and verify one prospect demonstration");pbuild.add_argument("business_id");pbuild.add_argument("--output",dest="output_root",default=".jarvis/prospects")
+    knowledge=sub.add_parser("knowledge",help="query or grow the local AEGIS second brain")
+    kp=knowledge.add_subparsers(dest="knowledge_command")
+    ksearch=kp.add_parser("search",help="search compact local knowledge packets");ksearch.add_argument("query");ksearch.add_argument("--department",default="");ksearch.add_argument("--limit",type=int,default=8);ksearch.add_argument("--full",action="store_true")
+    kresearch=kp.add_parser("research",help="run one bounded due-department research cycle");kresearch.add_argument("--force",action="store_true")
+    kp.add_parser("departments",help="show department memory growth and research schedule")
     return p
 
 def _emit(args,payload,text=None):
@@ -148,6 +153,22 @@ def _prospect(args):
         from prospecting.workflow import BusinessProspectingAgent
         return _emit(args,BusinessProspectingAgent(store=store).generate_business_demo(args.business_id,output_root=args.output_root))
     raise ValueError("prospect command is required")
+def _knowledge(args):
+    from urllib.parse import urlencode
+    from urllib.request import Request, urlopen
+    url=os.getenv("AEGIS_KNOWLEDGE_URL","http://127.0.0.1:8892").rstrip("/")
+    token=os.getenv("AEGIS_KNOWLEDGE_TOKEN","")
+    if not token: raise ValueError("AEGIS_KNOWLEDGE_TOKEN is required")
+    if args.knowledge_command=="search":
+        query=url+"/search?"+urlencode({"q":args.query,"department":args.department,"limit":args.limit,"full":int(args.full)})
+        request=Request(query,headers={"Authorization":f"Bearer {token}","Accept":"application/json"})
+    elif args.knowledge_command=="departments":
+        request=Request(url+"/departments",headers={"Authorization":f"Bearer {token}","Accept":"application/json"})
+    elif args.knowledge_command=="research":
+        request=Request(url+"/research",data=json.dumps({"force":args.force}).encode(),method="POST",headers={"Authorization":f"Bearer {token}","Content-Type":"application/json"})
+    else: raise ValueError("knowledge command is required")
+    with urlopen(request,timeout=60) as response:
+        return _emit(args,json.loads(response.read(2_000_000).decode()))
 def _run(args):
     e=_envelope(args);task={"task_id":e.task_id,"objective":e.objective,"capability":e.capability,"trust_required":int(e.trust_required),"input":e.input,"verification":getattr(args,"verification",{})}
     if not args.execute:return _emit(args,task,text=f"DRY RUN\nTask: {e.task_id}\nCapability: {e.capability}\nUse --execute to dispatch through AEGIS.")
@@ -203,6 +224,7 @@ def execute(args):
     if args.command=="project":return _project(args)
     if args.command=="business-scan":return _business_scan(args)
     if args.command=="prospect":return _prospect(args)
+    if args.command=="knowledge":return _knowledge(args)
     if args.command=="safety":return _safety(args)
     if args.command=="toggle":args.safety_command="enable" if args.state=="on" else "disable";return _safety(args)
     if args.command=="capabilities":return _emit(args,_caps(args))

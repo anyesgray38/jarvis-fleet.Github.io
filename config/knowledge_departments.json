@@ -1,0 +1,52 @@
+[
+  {
+    "id": "web-intelligence",
+    "name": "Web Intelligence",
+    "manager": "Atlas",
+    "topics": [],
+    "queries": ["current web research and agentic AI operations"],
+    "urls": [],
+    "cadence_minutes": 360,
+    "enabled": true
+  },
+  {
+    "id": "security",
+    "name": "Security & Resilience",
+    "manager": "Sentinel",
+    "topics": ["OWASP application security best practices"],
+    "queries": ["current defensive security engineering guidance"],
+    "urls": [],
+    "cadence_minutes": 720,
+    "enabled": true
+  },
+  {
+    "id": "code-factory",
+    "name": "Code Factory",
+    "manager": "Forge",
+    "topics": ["software architecture maintainability"],
+    "queries": ["current Next.js production deployment guidance"],
+    "urls": [],
+    "cadence_minutes": 720,
+    "enabled": true
+  },
+  {
+    "id": "business-prospecting",
+    "name": "Business Prospecting",
+    "manager": "Harbor",
+    "topics": ["local business digital presence and conversion"],
+    "queries": [],
+    "urls": [],
+    "cadence_minutes": 720,
+    "enabled": true
+  },
+  {
+    "id": "memory-forge",
+    "name": "Memory Forge",
+    "manager": "Mnemia",
+    "topics": [],
+    "queries": [],
+    "urls": [],
+    "cadence_minutes": 360,
+    "enabled": true
+  }
+]

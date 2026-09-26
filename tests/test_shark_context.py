@@ -9,11 +9,11 @@ class SharkContextTests(unittest.TestCase):
         self.assertIn("SHARK AI — LEAN CORE", context)
         self.assertNotIn("SHARK PENTEST PROFILE", context)
 
-    def test_pentest_loads_only_relevant_security_profiles(self):
-        context = load_context("pentest")
+    def test_removed_offensive_purpose_loads_no_special_profile(self):
+        context = load_context("offensive-security")
         self.assertIn("SHARK AI — LEAN CORE", context)
-        self.assertIn("SHARK SECURITY PROFILE", context)
-        self.assertIn("SHARK PENTEST PROFILE", context)
+        self.assertNotIn("SHARK SECURITY PROFILE", context)
+        self.assertNotIn("SHARK PENTEST PROFILE", context)
         self.assertNotIn("SHARK CODING PROFILE", context)
 
     def test_apply_context_does_not_mutate_user_messages(self):

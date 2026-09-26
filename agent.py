@@ -21,6 +21,7 @@ import os
 import platform
 import argparse
 import time
+import re
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -68,11 +69,18 @@ def recv_raw(sock):
 # ──────────────────────────────────────────────────────────────────────────────
 
 def get_info():
+    hostname = platform.node()
+    configured_name = os.getenv('AEGIS_AGENT_NAME', '').strip()
+    readable_host = re.sub(r'[-_]+', ' ', hostname).strip().title()
+    designated_name = configured_name or (f'{readable_host} Worker' if readable_host else 'Aegis Worker')
+    tags = [item.strip() for item in os.getenv('AEGIS_AGENT_TAGS', '').split(',') if item.strip()]
     return {
-        'hostname': platform.node(),
+        'designated_name': designated_name,
+        'hostname': hostname,
         'os':       platform.system(),                          # Linux / Windows / Darwin
         'user':     os.getenv('USER') or os.getenv('USERNAME', 'unknown'),
         'cwd':      os.getcwd(),
+        'tags':     tags,
     }
 
 

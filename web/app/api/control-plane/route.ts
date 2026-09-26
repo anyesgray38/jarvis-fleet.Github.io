@@ -19,6 +19,7 @@ const demo = process.env.AEGIS_DEMO_MODE === 'true'
 
 type Agent = {
   id: number
+  designated_name: string
   hostname: string
   os: string
   ip: string
@@ -40,6 +41,7 @@ let demoJobs: Job[] = []
 const demoAgents: Agent[] = [
   {
     id: 1,
+    designated_name: 'Aegis Demo Worker',
     hostname: 'aegis-local',
     os: 'demo',
     ip: '127.0.0.1',
