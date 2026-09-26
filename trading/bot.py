@@ -13,6 +13,7 @@ from .models import Candle, OrderIntent, Signal
 from .paper import PaperBroker
 from .risk import RiskEngine, RiskPolicy
 from .smc import SMCAnalyzer
+from .ict_framework import ICTAnalyzer, ICTReport
 
 
 class BotState(str, Enum):
@@ -37,17 +38,20 @@ class TradingBot:
         symbol: str,
         timeframe: str,
         *,
-        analyzer: SMCAnalyzer | None = None,
+        analyzer: SMCAnalyzer | ICTAnalyzer | None = None,
+        strategy_id: str = "smc",
         risk_policy: RiskPolicy | None = None,
         broker: PaperBroker | None = None,
     ):
         self.symbol = symbol
         self.timeframe = timeframe
         self.analyzer = analyzer or SMCAnalyzer()
+        self.strategy_id = strategy_id
         self.risk = RiskEngine(risk_policy or RiskPolicy(account_equity=10_000.0))
         self.broker = broker or PaperBroker()
         self.state = BotState.STOPPED
         self.events: list[BotEvent] = []
+        self.last_ict_report: ICTReport | None = None
 
     def _event(self, state: BotState, message: str, signal_id: str | None = None) -> None:
         self.state = state
@@ -55,7 +59,11 @@ class TradingBot:
 
     def scan(self, candles: Sequence[Candle]) -> Signal | None:
         self._event(BotState.SCANNING, f"scanning {self.symbol} {self.timeframe}")
-        signal = self.analyzer.analyze(self.symbol, self.timeframe, candles)
+        if isinstance(self.analyzer, ICTAnalyzer):
+            self.last_ict_report = self.analyzer.analyze(self.symbol, self.timeframe, candles, self.strategy_id)
+            signal = self.last_ict_report.signal
+        else:
+            signal = self.analyzer.analyze(self.symbol, self.timeframe, candles)
         if signal is None:
             self._event(BotState.STOPPED, "no admitted setup")
             return None
