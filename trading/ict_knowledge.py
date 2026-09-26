@@ -6,6 +6,7 @@ for AEGIS and deliberately separates source claims from engine interpretation.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -26,3 +27,40 @@ def strategy_rules(strategy_id: str) -> dict[str, Any]:
 
 def liquidity_first_roles() -> dict[str, str]:
     return dict(load_ict_knowledge()["framework"]["liquidity_first_interpretation"])
+
+
+def term_definitions() -> dict[str, dict[str, str]]:
+    """Return the local meaning/function dictionary used by Trading agents."""
+    return dict(load_ict_knowledge().get("term_definitions", {}))
+
+
+def _normalized_term(value: str) -> str:
+    return re.sub(r"\s+", " ", value.casefold().replace("_", " ").replace("-", " ")).strip()
+
+
+def term_definition(term: str) -> dict[str, str] | None:
+    """Resolve a local definition by canonical name, phrase, or glossary alias."""
+    requested = _normalized_term(term)
+    definitions = term_definitions()
+    for canonical, definition in definitions.items():
+        if _normalized_term(canonical) == requested:
+            return dict(definition)
+
+    aliases = {
+        "market structure shift": "MSS",
+        "change in state of delivery": "CISD",
+        "fair value gap": "FVG",
+        "buy side liquidity": "BSL",
+        "sell side liquidity": "SSL",
+        "external range liquidity": "ERL",
+        "internal range liquidity": "IRL",
+        "order block": "OB",
+        "optimal trade entry": "OTE",
+        "inverted fair value gap": "IFVG",
+        "balanced price range": "BPR",
+        "smart money technique divergence": "SMT",
+    }
+    canonical = aliases.get(requested)
+    if canonical and canonical in definitions:
+        return dict(definitions[canonical])
+    return None

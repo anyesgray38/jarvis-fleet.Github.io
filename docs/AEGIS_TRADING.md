@@ -45,3 +45,9 @@ Use `TradingBot(..., analyzer=ICTAnalyzer(), strategy_id="turtle_soup")` to run
 an ICT gate through the existing paper-only bot. A missing framework step
 returns no signal. No ICT rule can bypass risk admission, and no live broker
 adapter is enabled.
+
+Every ICT term used by the engine is also stored locally in
+`trading/ict_knowledge.json` under `term_definitions`. Each entry contains a
+plain-language `meaning` and an operational `function`. Agents can resolve
+canonical names or aliases through `term_definition()` without web access or
+model-memory assumptions.

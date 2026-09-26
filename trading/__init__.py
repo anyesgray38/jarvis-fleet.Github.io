@@ -10,7 +10,7 @@ from .paper import PaperBroker
 from .universe import AssetClass, Instrument, MarketRegime, DEFAULT_UNIVERSE, find_instruments
 from .strategies import StrategySpec, STRATEGY_CATALOG, find_strategies
 from .research import ResearchTarget, TradingResearchPlanner
-from .ict_knowledge import load_ict_knowledge, foundation_sequence, strategy_rules, liquidity_first_roles
+from .ict_knowledge import load_ict_knowledge, foundation_sequence, strategy_rules, liquidity_first_roles, term_definitions, term_definition
 from .ict_framework import ICTAnalyzer, ICTFeatures, ICTReport, ICTStep, DealingRange, LiquidityPool, LiquidityEvent, Imbalance, PriceZone, SwingPoint
 
 __all__ = [
@@ -20,7 +20,7 @@ __all__ = [
     "RiskPolicy", "SMCAnalyzer", "Signal", "StrategySpec", "STRATEGY_CATALOG",
     "TradeResult", "TradingBot", "TradingBotFleet", "TradingResearchPlanner",
     "find_instruments", "find_strategies", "load_ict_knowledge",
-    "foundation_sequence", "strategy_rules", "liquidity_first_roles",
+    "foundation_sequence", "strategy_rules", "liquidity_first_roles", "term_definitions", "term_definition",
     "ICTAnalyzer", "ICTFeatures", "ICTReport", "ICTStep", "DealingRange",
     "LiquidityPool", "LiquidityEvent", "Imbalance", "PriceZone", "SwingPoint",
 ]
