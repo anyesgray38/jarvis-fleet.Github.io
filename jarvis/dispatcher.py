@@ -10,6 +10,7 @@ from .capabilities import CapabilityRegistry
 from .workflow import WorkflowPlan, WorkflowRunResult, WorkflowRunner
 from security.policy import Policy, PolicyDenied
 from security.safety import SafetyController, SafetySettings, control_for_capability
+from routing import SkillRouter
 
 
 class Executor(Protocol):
@@ -35,6 +36,7 @@ class Dispatcher:
         checks: dict[str, Callable[[dict[str, Any], dict[str, Any]], tuple[bool, str]]] | None = None,
         evidence: Any | None = None,
         safety: SafetySettings | None = None,
+        router: SkillRouter | None = None,
     ):
         self.registry = registry
         self.policy = policy
@@ -44,6 +46,7 @@ class Dispatcher:
         self.activity = ActivityFeed()
         self.autonomy = AutonomyController()
         self.safety = SafetyController(safety)
+        self.router = router
 
     def dispatch(self, task: dict[str, Any], *, security: dict[str, Any] | None = None) -> DispatchResult:
         task_id = str(task.get("task_id", ""))
@@ -54,6 +57,7 @@ class Dispatcher:
             return DispatchResult(task_id, TaskStatus.REJECTED, error="trust level does not permit execution")
         self.activity.emit("task.received", task_id, capability=task.get("capability"))
         try:
+            task = self._resolve_task(task)
             capability_id = str(task["capability"])
             control = task.get("safety_control") or control_for_capability(capability_id)
             self.safety.require(control) if control else None
@@ -85,6 +89,32 @@ class Dispatcher:
         except Exception as exc:
             self._record("task.failed", task, {"error": str(exc)})
             return DispatchResult(task_id, "failed", error=str(exc))
+
+    def _resolve_task(self, task: dict[str, Any]) -> dict[str, Any]:
+        """Resolve an objective only when the caller did not select a capability."""
+        if task.get("capability"):
+            return task
+        objective = str(task.get("objective", "")).strip()
+        if not objective:
+            raise ValueError("capability or objective is required")
+        if self.router is None:
+            raise ValueError("capability is required; no skill router configured")
+        routes = self.router.route(objective, limit=1)
+        if not routes:
+            raise ValueError("no registered capability matches objective")
+        route = routes[0]
+        resolved = dict(task)
+        resolved["capability"] = route.capability_id
+        resolved["route"] = {
+            "skill": route.skill,
+            "score": route.score,
+            "matched_terms": list(route.matched_terms),
+            "verification": list(route.verification),
+            "requires_authorization": route.requires_authorization,
+        }
+        self._record("task.routed", resolved, {"route": resolved["route"], "capability": route.capability_id})
+        self.activity.emit("task.routed", str(task.get("task_id", "")), capability=route.capability_id, skill=route.skill)
+        return resolved
 
     def dispatch_workflow(
         self,
