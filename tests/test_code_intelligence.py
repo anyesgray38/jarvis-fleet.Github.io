@@ -28,3 +28,10 @@ def test_architecture_context_contains_map_and_focused_source(tmp_path: Path):
     assert "AEGIS REPOSITORY INTELLIGENCE" in context
     assert "TokenVerifier" in context
     assert "--- auth.py ---" in context
+
+
+def test_empty_objective_preserves_readable_context(tmp_path: Path):
+    (tmp_path/"README.md").write_text("# demo\n",encoding="utf-8")
+    context=architecture_context(tmp_path,["README.md"],"")
+    assert "--- README.md ---" in context
+    assert "# demo" in context
