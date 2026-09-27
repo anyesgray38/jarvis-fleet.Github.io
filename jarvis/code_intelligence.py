@@ -87,6 +87,10 @@ def select_relevant(root:Path,inventory:list[FileIntel],objective:str,limit:int=
     selected=(primary+neighbors)[:limit]
     if not selected:
         selected=[x for x in inventory if x.entrypoint][:limit]
+    if not selected:
+        # Preserve the legacy snapshot contract for tiny repos, documentation-only
+        # repos, and callers that do not provide an objective.
+        selected=inventory[:limit]
     return selected
 
 
