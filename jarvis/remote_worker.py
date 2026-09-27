@@ -4,6 +4,8 @@ import argparse, json, os, subprocess
 from pathlib import Path
 from typing import Any
 
+from jarvis.code_intelligence import architecture_context
+
 MAX_FILE_BYTES = 40_000
 MAX_CONTEXT = 180_000
 CAPABILITIES = {"terminal.inspect", "terminal.execute"}
@@ -11,18 +13,9 @@ CAPABILITIES = {"terminal.inspect", "terminal.execute"}
 def run(cmd: list[str], *, cwd: Path, timeout: int = 300) -> subprocess.CompletedProcess[str]:
     return subprocess.run(cmd, cwd=cwd, text=True, capture_output=True, timeout=timeout, check=False)
 
-def snapshot(project: Path) -> str:
+def snapshot(project: Path, objective: str = "") -> str:
     files = run(["git", "ls-files"], cwd=project).stdout.splitlines()
-    chunks, total = [], 0
-    for name in files:
-        if total >= MAX_CONTEXT: break
-        path = project / name
-        if not path.is_file() or ".git" in path.parts: continue
-        try: data = path.read_text(encoding="utf-8")[:MAX_FILE_BYTES]
-        except (OSError, UnicodeDecodeError): continue
-        chunks.append(f"\n--- {name} ---\n{data}")
-        total += len(data)
-    return "".join(chunks)
+    return architecture_context(project, files, objective, max_chars=MAX_CONTEXT)
 
 def deterministic_inspection(objective: str, context: str, project: Path | None = None) -> str:
     """Produce a safe read-only report when no approved local model is reachable."""
@@ -155,7 +148,7 @@ def main() -> int:
     project = Path(args.project).resolve()
     if not (project / ".git").exists(): raise RuntimeError("target project is not a git checkout")
     print(json.dumps({"stage": "inspect", "job_id": args.job_id, "capability": args.capability}))
-    context = snapshot(project)
+    context = snapshot(project, args.objective)
     try:
         plan = model_plan(args.objective, context, args.capability)
     except LookupError as exc:
