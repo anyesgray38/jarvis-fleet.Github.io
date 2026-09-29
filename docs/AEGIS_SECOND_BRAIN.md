@@ -68,3 +68,38 @@ Firecrawl is admitted through AEGIS's existing MCP fabric at
 value from an MCP config can also be supplied as `FIRECRAWL_AUTHORIZATION`;
 the adapter normalizes it to a Bearer header. The credential is never stored in
 the repository or returned to the dashboard.
+
+
+## Durable agent memory with Hindsight
+
+AEGIS can run a self-hosted Hindsight backend without replacing the evidence-oriented second brain. The existing knowledge runtime remains responsible for provenance, source archives, deterministic compaction, and bounded research. The optional memory profile adds:
+
+- `hindsight` on loopback port `8895` for structured long-term memory.
+- `memory-runtime` on loopback port `8894` as AEGIS's authenticated facade.
+- Bank-scoped retain, recall, reflect, and MCP access.
+- A persistent `aegis-hindsight` volume.
+
+Start it with a local Ollama model already installed on the host:
+
+```bash
+AEGIS_MEMORY_TOKEN="$(openssl rand -hex 32)"
+export AEGIS_MEMORY_TOKEN
+export AEGIS_HINDSIGHT_LLM_PROVIDER=ollama
+export AEGIS_HINDSIGHT_LLM_MODEL=llama3.2:3b  # change to an installed Ollama model
+
+docker compose --env-file deploy/.env -f deploy/compose.yml --profile memory up -d hindsight memory-runtime
+```
+
+The Hindsight service uses `network_mode: host` so it can reach the host Ollama runtime at its normal loopback address. Both Hindsight and the AEGIS facade bind to loopback; they are not exposed to the LAN.
+
+Authenticated AEGIS calls:
+
+```text
+POST /retain   {"bank_id":"aegis-core","content":"...","context":"..."}
+POST /recall   {"bank_id":"aegis-core","query":"..."}
+POST /reflect  {"bank_id":"aegis-core","query":"..."}
+GET  /mcp      # returns the bank-scoped Hindsight MCP endpoint
+GET  /health
+```
+
+Recommended bank layout: `aegis-core`, `coding:<repo>`, `agent:<name>`, `trading`, `prospecting`, and `finance`. Keep externally scraped evidence in the knowledge runtime; retain verified conclusions, agent experiences, decisions, outcomes, and repository/session history in Hindsight.

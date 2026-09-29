@@ -33,6 +33,7 @@ jobs:
           AEGIS_FLEET_SECRET: ci-validation-fleet-secret
           AEGIS_GATEWAY_TOKEN: ci-validation-gateway-token
           AEGIS_KNOWLEDGE_TOKEN: ci-validation-knowledge-token
+          AEGIS_MEMORY_TOKEN: ci-validation-memory-token
           AEGIS_PROSPECT_TOKEN: ci-validation-prospect-token
         run: docker compose -f deploy/compose.yml config
 
