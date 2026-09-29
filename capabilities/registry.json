@@ -1,5 +1,5 @@
 {
-  "version": 11,
+  "version": 12,
   "purpose": "Domain-agnostic capability registry for AEGIS",
   "capabilities": [
     {
@@ -143,6 +143,28 @@
       "verification": [
         "task_state",
         "visual_check"
+      ]
+    },
+    {
+      "id": "core.desktop_control",
+      "provider": "aegis",
+      "kind": "core",
+      "tags": [
+        "desktop",
+        "computer_use",
+        "ui",
+        "accessibility",
+        "vision",
+        "interaction"
+      ],
+      "execution": "provider",
+      "action": "desktop.control",
+      "requires_authorization": true,
+      "verification": [
+        "fresh_observation",
+        "state_change",
+        "action_audit",
+        "recovery"
       ]
     },
     {

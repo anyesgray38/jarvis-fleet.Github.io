@@ -213,6 +213,32 @@ class Orchestrator:
             self.agents.pop(session.id, None)
         session.close()
 
+    def _register_session(self, session: AgentSession) -> list[AgentSession]:
+        """Register a worker and retire older sessions for the same hostname.
+
+        A reconnect can arrive before the old socket has reported its close. The
+        hostname is the durable worker identity used by the job queue, so
+        keeping both sessions live would make one physical worker appear twice
+        and could route work nondeterministically.
+        """
+        hostname = str(session.info.get('hostname') or '').strip()
+        replaced: list[AgentSession] = []
+        with self._lock:
+            if hostname:
+                for agent_id, existing in list(self.agents.items()):
+                    if existing.info.get('hostname') != hostname:
+                        continue
+                    existing.alive = False
+                    self.agents.pop(agent_id, None)
+                    replaced.append(existing)
+            session.id = self._next_id
+            self._next_id += 1
+            self.agents[session.id] = session
+
+        for existing in replaced:
+            existing.close()
+        return replaced
+
     # ── Job queue ─────────────────────────────────────────────────────────────
 
     def queue_job(self, hostname: str, cmd: str) -> dict:
@@ -333,11 +359,12 @@ class Orchestrator:
 
         send_msg(sock, {'type': 'auth', 'ok': True})
 
-        with self._lock:
-            aid = self._next_id
-            self._next_id += 1
-            session = AgentSession(sock, addr, aid, msg.get('info', {}))
-            self.agents[aid] = session
+        session = AgentSession(sock, addr, 0, msg.get('info', {}))
+        replaced = self._register_session(session)
+        aid = session.id
+
+        if replaced:
+            print(f'[*] Retired {len(replaced)} stale session(s) for {session.info.get("hostname", "?")}')
 
         info = session.info
         print(

@@ -60,6 +60,13 @@ def build_parser()->argparse.ArgumentParser:
     st=ps.add_parser("status",help="show a project job or queued jobs");st.add_argument("job_id",nargs="?");st.add_argument("--status",choices=STATUSES);st.add_argument("--db",default=os.getenv("JARVIS_JOB_DB",".jarvis/jobs.db"))
     lg=ps.add_parser("logs",help="show project job events");lg.add_argument("job_id");lg.add_argument("--limit",type=int,default=100);lg.add_argument("--db",default=os.getenv("JARVIS_JOB_DB",".jarvis/jobs.db"))
     ca=ps.add_parser("cancel",help="cancel a queued or running project job");ca.add_argument("job_id");ca.add_argument("--db",default=os.getenv("JARVIS_JOB_DB",".jarvis/jobs.db"))
+    desktop=sub.add_parser("desktop",help="inspect or stop the local governed desktop runtime")
+    ds=desktop.add_subparsers(dest="desktop_command")
+    ds.add_parser("status",help="show desktop runtime and backend state")
+    stop=ds.add_parser("stop",help="latch the emergency desktop stop")
+    stop.add_argument("--reason",default="operator CLI stop")
+    resume=ds.add_parser("resume",help="resume desktop control after an explicit confirmation")
+    resume.add_argument("--confirm",action="store_true")
     scan=sub.add_parser("business-scan",help="discover and research businesses in a public geographic target")
     scan.add_argument("target")
     scan.add_argument("--category",default="")
@@ -115,6 +122,17 @@ def _safety(args):
     if args.safety_command in {None,"list"}:return _emit(args,s.snapshot())
     if args.safety_command=="show":return _emit(args,{args.control:s.enabled(args.control)})
     enabled=args.safety_command=="enable";s.set(args.control,enabled);return _emit(args,{args.control:enabled})
+def _desktop(args):
+    from urllib.request import Request, urlopen
+    url=os.getenv("AEGIS_DESKTOP_RUNTIME_URL","http://127.0.0.1:8894").rstrip("/")
+    path="/health" if args.desktop_command=="status" else ("/stop" if args.desktop_command=="stop" else "/resume")
+    payload=None
+    if args.desktop_command=="stop": payload=json.dumps({"reason":args.reason}).encode()
+    if args.desktop_command=="resume":
+        if not args.confirm: raise PermissionError("desktop resume requires --confirm")
+        payload=b'{"confirm":true}'
+    request=Request(url+path,data=payload,headers={"Accept":"application/json",**({"Content-Type":"application/json"} if payload else {})},method="POST" if payload else "GET")
+    with urlopen(request,timeout=5) as response:return _emit(args,json.loads(response.read().decode()))
 def _doctor(args):
     checks={"python":sys.version.split()[0],"repository_root":ROOT.exists(),"security_policy":DEFAULT_POLICY.exists(),"safety_controls":True,"capability_registry":Path(args.capabilities).exists(),"evidence_directory":(ROOT/"evidence").exists()}
     checks["healthy"]=all(v is True for k,v in checks.items() if k!="python");return checks
@@ -249,6 +267,7 @@ def execute(args):
     if args.command in {None,"help"}:print(BANNER);build_parser().print_help();return 0
     if args.command=="status":return _emit(args,_status(args))
     if args.command=="project":return _project(args)
+    if args.command=="desktop":return _desktop(args)
     if args.command=="business-scan":return _business_scan(args)
     if args.command=="builder":return _builder(args)
     if args.command=="prospect":return _prospect(args)

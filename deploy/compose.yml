@@ -41,7 +41,7 @@ services:
     environment:
       AEGIS_FLEET_SECRET: ${AEGIS_FLEET_SECRET:?Set AEGIS_FLEET_SECRET}
       AEGIS_AGENT_NAME: ${AEGIS_AGENT_NAME:-Aegis Local Worker}
-      AEGIS_AGENT_TAGS: ${AEGIS_AGENT_TAGS:-local,research,knowledge,security,code-factory,business-prospecting,maintenance}
+      AEGIS_AGENT_TAGS: ${AEGIS_AGENT_TAGS:-local,research,knowledge,security,code-factory,business-prospecting,trading,maintenance}
       USER: aegis-local
       PYTHONUNBUFFERED: "1"
     user: "${AEGIS_AGENT_UID:-1000}:${AEGIS_AGENT_GID:-1000}"
@@ -164,7 +164,7 @@ services:
     volumes:
       - localai-models:/models
       - localai-data:/data
-    mem_limit: 1400m
+    mem_limit: 2g
     cpus: 1.5
     pids_limit: 128
     init: true
@@ -185,6 +185,7 @@ services:
     environment:
       AEGIS_MODEL_BIND: 127.0.0.1
       AEGIS_MODEL_PORT: 8891
+      AEGIS_MODEL_TIMEOUT: ${AEGIS_MODEL_TIMEOUT:-600}
       AEGIS_LOCALAI_URL: ${AEGIS_LOCALAI_URL:-http://127.0.0.1:8080}
       AEGIS_OLLAMA_URL: ${AEGIS_OLLAMA_URL:-http://127.0.0.1:11434}
       AEGIS_OPENAI_API_KEY: ${AEGIS_OPENAI_API_KEY:-}

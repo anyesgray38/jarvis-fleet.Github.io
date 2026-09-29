@@ -1,0 +1,16 @@
+[Unit]
+Description=AEGIS governed desktop-control runtime
+After=graphical-session.target
+Wants=graphical-session.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/jarvis-fleet
+ExecStart=/usr/bin/python3 %h/jarvis-fleet/desktop_runtime.py
+Environment=AEGIS_DESKTOP_BIND=127.0.0.1
+Environment=AEGIS_DESKTOP_PORT=8894
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=default.target

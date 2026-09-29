@@ -20,6 +20,7 @@ class SafetyTests(unittest.TestCase):
 
     def test_capability_maps_to_control(self):
         self.assertEqual(control_for_capability("shell.execute"), "shell_execution")
+        self.assertEqual(control_for_capability("desktop.control"), "desktop_control")
         self.assertIsNone(control_for_capability("filesystem.write"))
 
     def test_disabled_control_blocks_and_enabled_allows(self):

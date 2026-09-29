@@ -2,6 +2,34 @@
   "version": 1,
   "models": [
     {
+      "id": "huihui-qwen3.5-9b-abliterated:q2_k",
+      "family": "qwen3.5",
+      "provider": "localai",
+      "source": "https://huggingface.co/mradermacher/Huihui-Qwen3.5-9B-abliterated-GGUF",
+      "format": "GGUF",
+      "quantization": "Q2_K",
+      "modalities": [
+        "text"
+      ],
+      "tags": [
+        "general",
+        "reasoning",
+        "coding",
+        "local",
+        "chat",
+        "memory-constrained"
+      ],
+      "purposes": [
+        "general",
+        "coding",
+        "research",
+        "planning"
+      ],
+      "local_only": true,
+      "experimental": true,
+      "notes": "Q2_K GGUF synthesis of Huihui-Qwen3.5-9B-abliterated, configured for Penguin's 2.7 GiB RAM and 32 GB disk. Text-first; vision projector intentionally omitted."
+    },
+    {
       "id": "llmfan46/gemma-3-27b-it-ultra-uncensored-heretic-GGUF:Q4_K_M",
       "family": "gemma-3-27b",
       "provider": "localai",

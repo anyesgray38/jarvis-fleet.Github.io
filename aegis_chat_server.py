@@ -10,7 +10,10 @@ from jarvis.model_service import ModelRuntime
 
 
 class Handler(BaseHTTPRequestHandler):
-    runtime = ModelRuntime()
+    # Cold-loading the memory-constrained local model can take several minutes
+    # on Penguin's Celeron CPU. Keep this bounded and configurable rather than
+    # allowing the provider call to use the library default implicitly.
+    runtime = ModelRuntime(timeout=float(os.getenv("AEGIS_MODEL_TIMEOUT", "120")))
 
     def log_message(self, *_):
         pass

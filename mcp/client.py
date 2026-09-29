@@ -99,12 +99,18 @@ class StdioTransport:
         raise McpError(f"stdio MCP request timed out after {timeout:.1f}s")
 
     def close(self) -> None:
-        if self._process is not None and self._process.poll() is None:
-            self._process.terminate()
+        process = self._process
+        if process is not None and process.poll() is None:
+            process.terminate()
             try:
-                self._process.wait(timeout=2)
+                process.wait(timeout=2)
             except subprocess.TimeoutExpired:
-                self._process.kill()
+                process.kill()
+                process.wait(timeout=2)
+        if process is not None:
+            for stream in (process.stdin, process.stdout, process.stderr):
+                if stream is not None:
+                    stream.close()
         self._process = None
         self._reader = None
 

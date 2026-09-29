@@ -23,6 +23,12 @@ DEFAULTS = {
     "secret_access": False,
     "git_write": False,
     "terminal_execution": False,
+    "desktop_control": False,
+    "desktop_password_fields": False,
+    "desktop_sudo_prompts": False,
+    "desktop_payments": False,
+    "desktop_file_deletion": False,
+    "desktop_security_changes": False,
 }
 
 
@@ -121,6 +127,14 @@ CAPABILITY_CONTROLS = {
     "system.delete": "destructive_actions",
     "terminal.execute": "terminal_execution",
     "terminal.write": "terminal_execution",
+    "desktop.control": "desktop_control",
+    "desktop.input": "desktop_control",
+    "desktop.window": "desktop_control",
+    "desktop.password": "desktop_password_fields",
+    "desktop.sudo": "desktop_sudo_prompts",
+    "desktop.payment": "desktop_payments",
+    "desktop.file_deletion": "desktop_file_deletion",
+    "desktop.security": "desktop_security_changes",
 }
 
 
