@@ -5,7 +5,8 @@
   "entrypoints": {
     "desktop_runtime": "desktop_runtime.py",
     "mcp_bridge": "hermes_mcp_server.py",
-    "service": "deploy/aegis-desktop-runtime.service"
+    "service": "deploy/aegis-desktop-runtime.service",
+    "exporter": "scripts/export_linux_profile.py"
   },
   "active_agents": [
     "orchestrator",
@@ -46,6 +47,7 @@
     "security/safety.py",
     "security/policy.py",
     "capabilities/registry.json",
+    "deploy/linux-computer-control.json",
     "agents/orchestrator.md",
     "agents/computer_operator.md",
     "agents/terminal.md",
@@ -57,6 +59,7 @@
     "skills/computer-use/SKILL.md",
     "deploy/aegis-desktop-runtime.service"
   ],
+  "registry_filter": "capabilities",
   "excluded_domains": [
     "trading/",
     "prospecting/",
