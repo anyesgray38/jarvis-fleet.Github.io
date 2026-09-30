@@ -67,6 +67,14 @@ def build_parser()->argparse.ArgumentParser:
     stop.add_argument("--reason",default="operator CLI stop")
     resume=ds.add_parser("resume",help="resume desktop control after an explicit confirmation")
     resume.add_argument("--confirm",action="store_true")
+    chrome=sub.add_parser("chrome",help="perform governed actions in an operator-connected Chrome session")
+    cs=chrome.add_subparsers(dest="chrome_command")
+    bedtime=cs.add_parser("bedtime-music",help="play an approximately one-hour bedtime-music video on YouTube")
+    bedtime.add_argument("--cdp-url",default=os.getenv("AEGIS_CHROME_CDP_URL","http://127.0.0.1:9222"))
+    bedtime.add_argument("--target",default="",help="optional substring matching the Chrome tab title or URL")
+    bedtime.add_argument("--query",default="one hour bedtime music")
+    bedtime.add_argument("--min-minutes",type=int,default=45)
+    bedtime.add_argument("--max-minutes",type=int,default=90)
     scan=sub.add_parser("business-scan",help="discover and research businesses in a public geographic target")
     scan.add_argument("target")
     scan.add_argument("--category",default="")
@@ -133,6 +141,16 @@ def _desktop(args):
         payload=b'{"confirm":true}'
     request=Request(url+path,data=payload,headers={"Accept":"application/json",**({"Content-Type":"application/json"} if payload else {})},method="POST" if payload else "GET")
     with urlopen(request,timeout=5) as response:return _emit(args,json.loads(response.read().decode()))
+def _chrome(args):
+    if args.chrome_command != "bedtime-music": raise ValueError("chrome command is required")
+    from aegis_chrome import ChromeControlError, play_bedtime_music
+    try:
+        result=play_bedtime_music(cdp_url=args.cdp_url,target=args.target,query=args.query,
+                                  min_seconds=args.min_minutes*60,max_seconds=args.max_minutes*60,
+                                  safety=_settings(args))
+    except (ChromeControlError, PermissionError, ValueError) as exc:
+        return _emit(args,{"ok":False,"error":str(exc)}) or 1
+    return _emit(args,result,text=f"Playing: {result['title']} ({result['duration_minutes']} minutes)")
 def _doctor(args):
     checks={"python":sys.version.split()[0],"repository_root":ROOT.exists(),"security_policy":DEFAULT_POLICY.exists(),"safety_controls":True,"capability_registry":Path(args.capabilities).exists(),"evidence_directory":(ROOT/"evidence").exists()}
     checks["healthy"]=all(v is True for k,v in checks.items() if k!="python");return checks
@@ -268,6 +286,7 @@ def execute(args):
     if args.command=="status":return _emit(args,_status(args))
     if args.command=="project":return _project(args)
     if args.command=="desktop":return _desktop(args)
+    if args.command=="chrome":return _chrome(args)
     if args.command=="business-scan":return _business_scan(args)
     if args.command=="builder":return _builder(args)
     if args.command=="prospect":return _prospect(args)

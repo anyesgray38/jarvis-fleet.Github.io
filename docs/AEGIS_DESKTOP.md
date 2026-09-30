@@ -59,6 +59,21 @@ The Hermes MCP bridge exposes `desktop_observe`, `desktop_screenshot`,
 `desktop_action`, `desktop_verify`, `desktop_stop`, and `desktop_resume`. Set
 `AEGIS_DESKTOP_RUNTIME_URL` if the service uses a non-default loopback port.
 
+## Direct Chrome command
+
+AEGIS can also control an already-connected Chrome session directly from the
+terminal without Hermes. Chrome must expose a local DevTools endpoint, usually
+by starting it with `--remote-debugging-port=9222`:
+
+```bash
+python3 -m jarvis.cli chrome bedtime-music
+```
+
+Use `--cdp-url` or `AEGIS_CHROME_CDP_URL` for another endpoint, `--target` to
+select a tab, and `--min-minutes` / `--max-minutes` to change the duration
+window. The command is gated by `desktop_control`, navigates only to YouTube,
+and verifies that the selected video is actively playing before it succeeds.
+
 The host can be degraded without the service being broken. For example, on a
 Wayland/XWayland session the CUA driver may report screen dimensions and a
 pointer while screenshot capture or AT-SPI is unavailable. AEGIS receives
