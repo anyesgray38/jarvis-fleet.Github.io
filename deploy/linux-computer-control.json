@@ -6,7 +6,8 @@
     "desktop_runtime": "desktop_runtime.py",
     "mcp_bridge": "hermes_mcp_server.py",
     "service": "deploy/aegis-desktop-runtime.service",
-    "exporter": "scripts/export_linux_profile.py"
+    "exporter": "scripts/export_linux_profile.py",
+    "browser_launcher": "scripts/start_control_browser.sh"
   },
   "active_agents": [
     "orchestrator",
@@ -57,6 +58,7 @@
     "agents/verifier.md",
     "agents/tester.md",
     "skills/computer-use/SKILL.md",
+    "scripts/start_control_browser.sh",
     "deploy/aegis-desktop-runtime.service"
   ],
   "registry_filter": "capabilities",

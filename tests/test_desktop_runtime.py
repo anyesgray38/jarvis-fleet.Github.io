@@ -1,9 +1,11 @@
 import json
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 from desktop_runtime import DesktopController
+from desktop_runtime import CuaDriverBackend
 from security.safety import SafetySettings
 
 
@@ -80,6 +82,40 @@ class DesktopRuntimeTests(unittest.TestCase):
             self.assertTrue(controller.verify({"active_window_contains": "test window"})["satisfied"])
             controller.action("move", {"x": 12, "y": 14})
             self.assertTrue(controller.verify({"pointer_at": {"x": 12, "y": 14}})["satisfied"])
+
+    def test_x11_fallback_discovers_real_window(self):
+        tree = '    0xa00003 "Browser": ("chrome" "Chrome") 1200x691+0+0  +85+40\n'
+        props = '_NET_WM_PID(CARDINAL) = 1234\n'
+        completed_tree = type("Completed", (), {"stdout": tree})()
+        completed_props = type("Completed", (), {"stdout": props})()
+        with patch.dict("os.environ", {"DISPLAY": ":0"}, clear=False), patch(
+            "desktop_runtime.shutil.which", return_value="/usr/bin/tool"
+        ), patch("desktop_runtime.subprocess.run", side_effect=[completed_tree, completed_props]), patch(
+            "desktop_runtime.Path.exists", return_value=True
+        ):
+            windows = CuaDriverBackend._x11_windows()
+        self.assertEqual(windows[0]["window_id"], 0xA00003)
+        self.assertEqual(windows[0]["pid"], 1234)
+        self.assertEqual(windows[0]["title"], "Browser")
+
+    def test_screenshot_falls_back_to_window_capture(self):
+        backend = CuaDriverBackend(timeout=5)
+        image = {"type": "image", "mimeType": "image/png", "data": "ZmFrZQ=="}
+        state = {
+            "structuredContent": {
+                "screenshot_width": 1200,
+                "screenshot_height": 691,
+            },
+            "content": [image],
+        }
+        with patch.object(backend, "_call", side_effect=[RuntimeError("desktop capture failed"), {
+            "structuredContent": {"windows": [{"pid": 1234, "window_id": 99}]}
+        }, state]):
+            screenshot = backend.screenshot()
+        self.assertTrue(screenshot["ok"])
+        self.assertEqual(screenshot["capture_scope"], "window")
+        self.assertEqual(screenshot["width"], 1200)
+        self.assertEqual(screenshot["height"], 691)
 
 
 if __name__ == "__main__":

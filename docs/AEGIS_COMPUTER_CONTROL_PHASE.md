@@ -49,6 +49,18 @@ Computer control is considered usable only when all of these are evidenced:
    visual confirmation.
 5. Stop, sensitive-field, and failure paths remain fail-closed.
 
+## Reproducible browser target
+
+Start a browser that the X11 fallback can observe:
+
+```bash
+AEGIS_BROWSER_CDP_PORT=9222 ./scripts/start_control_browser.sh about:blank
+```
+
+The launcher keeps its profile outside the repository, forces X11, disables
+GPU initialization, and leaves sandboxing enabled by default. Set
+`AEGIS_BROWSER_NO_SANDBOX=1` only when the host requires it.
+
 ## Cleanup boundary
 
 The Linux profile excludes repository caches, virtual environments, browser

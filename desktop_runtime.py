@@ -14,6 +14,8 @@ import hashlib
 import json
 import math
 import os
+import re
+import select
 import shutil
 import signal
 import subprocess
@@ -34,6 +36,11 @@ MAX_BODY_BYTES = 1_000_000
 MAX_TYPE_CHARS = 2_000
 MAX_AUDIT_BYTES = 10_000_000
 SENSITIVE_MARKERS = {"password", "passwd", "secret", "token", "pin", "otp"}
+X11_WINDOW_LINE = re.compile(
+    r'^\s+(0x[0-9a-fA-F]+)\s+"(.*?)":.*?'
+    r'(\d+)x(\d+)[+-]\d+[+-]\d+\s+([+-]\d+)([+-]\d+)\s*$'
+)
+X11_PID_LINE = re.compile(r'_NET_WM_PID\(CARDINAL\)\s*=\s*(\d+)')
 CONFIRMATION_CLASSES = {
     "sudo": "desktop_sudo_prompts",
     "payment": "desktop_payments",
@@ -133,6 +140,13 @@ class CuaDriverBackend:
         self._proc.stdin.flush()
         deadline = time.monotonic() + self.timeout
         while time.monotonic() < deadline:
+            remaining = max(0.0, deadline - time.monotonic())
+            try:
+                ready, _, _ = select.select([self._proc.stdout], [], [], remaining)
+            except (OSError, ValueError) as exc:
+                raise RuntimeError(f"cua-driver output wait failed: {exc}") from exc
+            if not ready:
+                raise TimeoutError(f"cua-driver timed out on {method}")
             line = self._proc.stdout.readline()
             if not line:
                 error = "cua-driver exited"
@@ -172,16 +186,102 @@ class CuaDriverBackend:
                 raise RuntimeError(self._error_text(result))
             return result
 
+    @staticmethod
+    def _x11_windows() -> list[dict[str, Any]]:
+        """Discover visible X11 windows omitted by the CUA window enumerator.
+
+        ChromeOS/Sommelier can expose a real X11 application window while the
+        CUA driver's native enumerator returns only its cursor overlay. This
+        bounded fallback uses the display's own window tree and properties,
+        then leaves capture and input delivery to the CUA driver.
+        """
+        if not os.environ.get("DISPLAY") or not shutil.which("xwininfo") or not shutil.which("xprop"):
+            return []
+        env = dict(os.environ)
+        try:
+            tree = subprocess.run(
+                ["xwininfo", "-root", "-tree"],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                env=env,
+                timeout=2,
+                check=False,
+            ).stdout[:100_000]
+        except (OSError, subprocess.TimeoutExpired):
+            return []
+        windows: list[dict[str, Any]] = []
+        seen: set[int] = set()
+        for line in tree.splitlines():
+            match = X11_WINDOW_LINE.match(line)
+            if not match:
+                continue
+            window_id = int(match.group(1), 16)
+            title = match.group(2).strip()
+            width, height = int(match.group(3)), int(match.group(4))
+            if window_id in seen or width < 80 or height < 80 or "Cua.AgentCursorOverlay" in title:
+                continue
+            try:
+                props = subprocess.run(
+                    ["xprop", "-id", hex(window_id), "_NET_WM_PID", "WM_NAME", "WM_CLASS"],
+                    capture_output=True,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    env=env,
+                    timeout=1,
+                    check=False,
+                ).stdout[:4_000]
+            except (OSError, subprocess.TimeoutExpired):
+                continue
+            pid_match = X11_PID_LINE.search(props)
+            if not pid_match:
+                continue
+            pid = int(pid_match.group(1))
+            if not Path(f"/proc/{pid}").exists():
+                continue
+            seen.add(window_id)
+            windows.append({
+                "app_name": "x11",
+                "bounds": {"height": height, "width": width, "x": int(match.group(5)), "y": int(match.group(6))},
+                "height": height,
+                "is_on_screen": True,
+                "pid": pid,
+                "title": title,
+                "width": width,
+                "window_id": window_id,
+                "x": int(match.group(5)),
+                "y": int(match.group(6)),
+                "z_index": 0,
+            })
+        return windows
+
+    def _windows(self) -> list[dict[str, Any]]:
+        windows_result = self._call("list_windows")
+        windows = self._structured(windows_result).get("windows", [])
+        if not isinstance(windows, list):
+            windows = []
+        usable = [
+            item for item in windows
+            if isinstance(item, dict)
+            and isinstance(item.get("pid"), int)
+            and isinstance(item.get("window_id"), int)
+        ]
+        if usable:
+            return windows
+        return windows + self._x11_windows()
+
     def observe(self) -> dict[str, Any]:
         with self._lock:
             size = self._structured(self._call("get_screen_size"))
             self._screen_size = size
             cursor = self._structured(self._call("get_cursor_position"))
-            windows_result = self._call("list_windows")
+            windows = self._windows()
             tree_result = self._call("get_accessibility_tree")
-            windows = self._structured(windows_result).get("windows", [])
             elements: list[dict[str, Any]] = []
             accessibility_error = "no window with a usable pid/window_id was discovered"
+            accessibility_degraded = False
             for window in windows:
                 if not isinstance(window, dict) or not isinstance(window.get("pid"), int) or not isinstance(window.get("window_id"), int):
                     continue
@@ -191,8 +291,10 @@ class CuaDriverBackend:
                         "include_screenshot": False, "max_elements": 300, "max_depth": 20,
                     })
                     if state.get("isError") is not True:
-                        elements = self._structured(state).get("elements", [])
-                        accessibility_error = ""
+                        structured = self._structured(state)
+                        elements = structured.get("elements", [])
+                        accessibility_degraded = bool(structured.get("degraded"))
+                        accessibility_error = str(structured.get("degraded_reason", "")) if accessibility_degraded else ""
                         break
                     accessibility_error = self._error_text(state)
                 except Exception as exc:
@@ -205,6 +307,7 @@ class CuaDriverBackend:
                 "windows": windows,
                 "accessibility": {
                     "available": bool(elements),
+                    "degraded": accessibility_degraded,
                     "elements": elements[:300],
                     "reason": accessibility_error,
                     "discovery_summary": " ".join(
@@ -217,7 +320,10 @@ class CuaDriverBackend:
         return self._structured(self._call("get_cursor_position"))
 
     def screenshot(self) -> dict[str, Any]:
-        result = self._call("get_desktop_state")
+        try:
+            result = self._call("get_desktop_state")
+        except Exception as exc:
+            result = {"isError": True, "content": [{"type": "text", "text": str(exc)}]}
         structured = self._structured(result)
         images = [i for i in result.get("content", []) if isinstance(i, dict) and i.get("type") == "image"]
         capture_scope = "desktop"
@@ -225,7 +331,7 @@ class CuaDriverBackend:
             # Recovery rung: a full-display grab can fail on XWayland while a
             # specific application window remains capturable. Never pretend a
             # window capture is a desktop capture.
-            windows = self._structured(self._call("list_windows")).get("windows", [])
+            windows = self._windows()
             for window in windows:
                 if not isinstance(window, dict) or not isinstance(window.get("pid"), int) or not isinstance(window.get("window_id"), int):
                     continue
@@ -248,7 +354,8 @@ class CuaDriverBackend:
             raise RuntimeError("cua-driver returned an empty screenshot")
         raw = base64.b64decode(data, validate=True)
         return {"ok": True, "backend": self.name, "capture_scope": capture_scope, "mime_type": image.get("mimeType", "image/png"),
-                "bytes": len(raw), "width": structured.get("width"), "height": structured.get("height"),
+                "bytes": len(raw), "width": structured.get("width") or structured.get("screenshot_width"),
+                "height": structured.get("height") or structured.get("screenshot_height"),
                 "image_base64": data}
 
     @staticmethod
