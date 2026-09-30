@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "profile": "linux-computer-control",
+  "purpose": "Minimal Linux execution profile for observable, governed computer control.",
+  "entrypoints": {
+    "desktop_runtime": "desktop_runtime.py",
+    "mcp_bridge": "hermes_mcp_server.py",
+    "service": "deploy/aegis-desktop-runtime.service"
+  },
+  "active_agents": [
+    "orchestrator",
+    "computer_operator",
+    "terminal",
+    "web_operator",
+    "chrome_diagnostician",
+    "sentinel",
+    "verifier",
+    "tester"
+  ],
+  "archived_agents": [
+    "business_prospecting",
+    "market"
+  ],
+  "capabilities": [
+    "core.task_orchestration",
+    "core.desktop_control",
+    "core.browser_automation",
+    "core.chrome_diagnostics",
+    "terminal.read"
+  ],
+  "optional_capabilities": [
+    "terminal.write",
+    "terminal.execute",
+    "core.model_inference"
+  ],
+  "included_paths": [
+    "desktop_runtime.py",
+    "hermes_mcp_server.py",
+    "aegis_chrome.py",
+    "jarvis/__init__.py",
+    "jarvis/capabilities.py",
+    "jarvis/chrome_diagnostics.py",
+    "routing/__init__.py",
+    "routing/router.py",
+    "security/__init__.py",
+    "security/safety.py",
+    "security/policy.py",
+    "capabilities/registry.json",
+    "agents/orchestrator.md",
+    "agents/computer_operator.md",
+    "agents/terminal.md",
+    "agents/web_operator.md",
+    "agents/chrome_diagnostician.md",
+    "agents/sentinel.md",
+    "agents/verifier.md",
+    "agents/tester.md",
+    "skills/computer-use/SKILL.md",
+    "deploy/aegis-desktop-runtime.service"
+  ],
+  "excluded_domains": [
+    "trading/",
+    "prospecting/",
+    "discovery/",
+    "knowledge/",
+    "fleet/",
+    "web/",
+    "providers/",
+    "mcp/",
+    "website_builder.py",
+    "prospecting_server.py"
+  ],
+  "safety_defaults": {
+    "desktop_control": false,
+    "desktop_password_fields": false,
+    "desktop_sudo_prompts": false,
+    "desktop_payments": false,
+    "desktop_file_deletion": false,
+    "desktop_security_changes": false
+  }
+}
