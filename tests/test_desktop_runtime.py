@@ -21,7 +21,8 @@ class FakeBackend:
 
     def observe(self):
         return {"ok": True, "backend": self.name, "screen": {"width": 1000, "height": 800},
-                "cursor": dict(self.cursor), "windows": [{"title": "AEGIS Test Window"}]}
+                "cursor": dict(self.cursor), "windows": [{"title": "AEGIS Test Window"}],
+                "accessibility": {"elements": [{"label": "AEGIS Test Window", "role": "frame"}]}}
 
     def screenshot(self):
         import base64
@@ -80,8 +81,47 @@ class DesktopRuntimeTests(unittest.TestCase):
             controller = self.controller(tmp, enabled=True)
             self.assertTrue(controller.verify({"backend_available": True})["satisfied"])
             self.assertTrue(controller.verify({"active_window_contains": "test window"})["satisfied"])
+            self.assertTrue(controller.verify({"accessibility_contains": "aegis test window"})["satisfied"])
+            self.assertTrue(controller.verify({"accessibility_not_contains": "missing label"})["satisfied"])
             controller.action("move", {"x": 12, "y": 14})
             self.assertTrue(controller.verify({"pointer_at": {"x": 12, "y": 14}})["satisfied"])
+
+    def test_click_element_requires_an_exact_accessibility_target(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            controller = self.controller(tmp, enabled=True)
+            with self.assertRaises(ValueError):
+                controller.action("click_element", {"pid": 1234})
+
+    def test_click_element_uses_the_driver_accessibility_route(self):
+        backend = CuaDriverBackend(timeout=5)
+        result = {
+            "structuredContent": {
+                "effect": "unverifiable",
+                "route": "accessibility",
+            },
+        }
+        with patch.object(backend, "_call", return_value=result) as call:
+            action = backend.action("click_element", {
+                "pid": 1234,
+                "element_token": "s00000001:13",
+            })
+        call.assert_called_once_with("click", {
+            "pid": 1234,
+            "element_token": "s00000001:13",
+            "delivery_mode": "background",
+        })
+        self.assertEqual(action["driver"]["route"], "accessibility")
+
+    def test_window_state_refreshes_a_stale_driver_session_once(self):
+        backend = CuaDriverBackend(timeout=5)
+        state = {"structuredContent": {"screenshot_frame_valid": True}}
+        with patch.object(backend, "_call", side_effect=[
+            RuntimeError("Window target pid 1234, window_id 99 is stale; refresh list_windows."),
+            state,
+        ]) as call, patch.object(backend, "close") as close:
+            self.assertIs(backend._call_window_state({"pid": 1234, "window_id": 99}), state)
+        close.assert_called_once_with()
+        self.assertEqual(call.call_count, 2)
 
     def test_x11_fallback_discovers_real_window(self):
         tree = '    0xa00003 "Browser": ("chrome" "Chrome") 1200x691+0+0  +85+40\n'

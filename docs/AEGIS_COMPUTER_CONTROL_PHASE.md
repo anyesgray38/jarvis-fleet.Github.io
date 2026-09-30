@@ -31,11 +31,14 @@ Observed directly during the rebuild:
 - The CUA driver is present and reports a `1371x771` display.
 - The Debian AT-SPI runtime is installed and `org.a11y.Bus` is active for the
   user session.
-- A real X11 Chromium window was discovered with its pid/window id, and the
-  accessibility result returned `degraded: false` with live elements.
-- A native Wayland Chromium process launches with `--ozone-platform=wayland`,
-  but the installed CUA driver does not discover that surface on this
-  compositor; no native Wayland computer-control success is claimed.
+- A real X11 Chromium window was discovered with its pid/window id and its
+  pixels were captured as a verified window-scoped PNG through the isolated
+  X11 CUA capture session.
+- CUA driver 0.30.4 can discover native Wayland Chromium and Firefox surfaces
+  on this host through compositor window metadata plus their AT-SPI trees.
+- Native Wayland semantic actions can use an exact accessibility element token;
+  raw pointer and pixel capture still require a compositor adapter that
+  Sommelier does not expose.
 - A harmless pointer move completed and `pointer_at` verification returned
   `satisfied: true`.
 - Safety gates are active; sensitive typing is blocked by policy.
@@ -45,12 +48,14 @@ Observed directly during the rebuild:
 - The native CUA window enumerator can block while Chromium publishes
   accessibility state. The runtime therefore prefers bounded X11 discovery
   whenever a validated X11 window is present.
-- This ChromeOS/Sommelier compositor does not expose the native Wayland
-  toplevel, screencopy, or input protocols required by the installed CUA
-  driver. Native Wayland is therefore the browser/CDP mode; governed
-  screen-level control uses the explicit X11/XWayland fallback until a
-  supported compositor adapter is available. Browser-specific CDP use still
-  requires an independent endpoint health check.
+- This ChromeOS/Sommelier compositor does not expose native screencopy or
+  target-addressable raw-input protocols. Native Wayland therefore supports
+  accessibility-grounded observation/actions; governed screen-level capture
+  and pointer control use the explicit X11/XWayland fallback until a supported
+  compositor adapter is available. The runtime keeps the native-Wayland CUA
+  session for semantic control and starts a separate helper session without
+  native probing only when an XWayland window capture is needed. Browser-
+  specific CDP use still requires an independent endpoint health check.
 
 ## Acceptance criteria
 
@@ -66,7 +71,7 @@ Computer control is considered usable only when all of these are evidenced:
 
 ## Reproducible browser target
 
-Start a browser that the X11 fallback can observe:
+Start a browser that the native Wayland path can observe:
 
 ```bash
 AEGIS_BROWSER_PLATFORM=wayland AEGIS_BROWSER_CDP_PORT=9222 \

@@ -9,6 +9,9 @@ WorkingDirectory=%h/jarvis-fleet
 ExecStart=/usr/bin/python3 %h/jarvis-fleet/desktop_runtime.py
 Environment=AEGIS_DESKTOP_BIND=127.0.0.1
 Environment=AEGIS_DESKTOP_PORT=8894
+Environment=AEGIS_CUA_DRIVER=%h/.local/bin/cua-driver
+Environment=CUA_DRIVER_RS_ENABLE_WAYLAND=1
+Environment=AEGIS_CUA_A11Y_TIMEOUT_MS=3000
 Restart=on-failure
 RestartSec=2
 

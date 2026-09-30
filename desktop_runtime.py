@@ -91,17 +91,36 @@ class CuaDriverBackend:
 
     name = "cua-driver"
 
-    def __init__(self, binary: str | None = None, *, timeout: float = 15.0):
+    def __init__(
+        self,
+        binary: str | None = None,
+        *,
+        timeout: float = 15.0,
+        driver_env: dict[str, str | None] | None = None,
+    ):
         candidate = binary or os.environ.get("AEGIS_CUA_DRIVER") or shutil.which("cua-driver")
         if not candidate:
+            managed_candidate = Path.home() / ".local/bin/cua-driver"
+            package_candidate = Path.home() / ".cua-driver/packages/current/cua-driver"
             hermes_candidate = Path.home() / ".hermes/tools/cua-driver-0.21.0-linux-x64/cua-driver"
-            candidate = str(hermes_candidate) if hermes_candidate.exists() else None
+            if managed_candidate.exists():
+                candidate = str(managed_candidate)
+            elif package_candidate.exists():
+                candidate = str(package_candidate)
+            elif hermes_candidate.exists():
+                candidate = str(hermes_candidate)
         self.binary = candidate
         self.timeout = max(2.0, min(60.0, float(timeout)))
         self._proc: subprocess.Popen[str] | None = None
         self._lock = threading.RLock()
         self._next_id = 1
+        self._driver_env = dict(driver_env or {})
+        self._x11_backend: CuaDriverBackend | None = None
         self._screen_size: dict[str, Any] = {}
+        self._accessibility_timeout_ms = max(
+            100,
+            min(120_000, int(os.environ.get("AEGIS_CUA_A11Y_TIMEOUT_MS", "3000"))),
+        )
 
     def status(self) -> dict[str, Any]:
         return {
@@ -118,6 +137,12 @@ class CuaDriverBackend:
         if self._proc and self._proc.poll() is None:
             return
         self.close()
+        child_env = dict(os.environ)
+        for key, value in self._driver_env.items():
+            if value is None:
+                child_env.pop(key, None)
+            else:
+                child_env[key] = value
         self._proc = subprocess.Popen(
             [self.binary, "mcp"],
             stdin=subprocess.PIPE,
@@ -128,6 +153,7 @@ class CuaDriverBackend:
             errors="replace",
             bufsize=1,
             close_fds=True,
+            env=child_env,
         )
         self._rpc("initialize", {})
 
@@ -185,6 +211,47 @@ class CuaDriverBackend:
             if result.get("isError") is True:
                 raise RuntimeError(self._error_text(result))
             return result
+
+    @staticmethod
+    def _is_stale_window_error(error: BaseException) -> bool:
+        text = str(error).casefold()
+        return "stale" in text and ("window" in text or "target" in text)
+
+    def _call_window_state(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        """Retry one window-state request after refreshing a stale CUA session.
+
+        The XWayland window list is obtained independently through X11.  A
+        long-lived CUA MCP process can retain an older target registry after a
+        browser is launched or relaunched, even though the same exact target
+        works in a fresh CUA process.  Reopening only on the driver's explicit
+        stale-target error keeps normal requests persistent while recovering
+        this observable race safely.
+        """
+        try:
+            return self._call("get_window_state", arguments)
+        except Exception as exc:
+            if not self._is_stale_window_error(exc):
+                raise
+            self.close()
+            return self._call("get_window_state", arguments)
+
+    def _x11_capture_backend(self) -> CuaDriverBackend:
+        """Return a helper CUA session with native-Wayland probing disabled.
+
+        The main session must keep native Wayland enabled for discovery and
+        AT-SPI actions.  On Sommelier, however, the driver's X11 image path
+        is selected only when the child process is started without the native
+        Wayland feature flag.  Keep that compatibility choice isolated to a
+        lazily-created capture session.
+        """
+        with self._lock:
+            if self._x11_backend is None:
+                self._x11_backend = CuaDriverBackend(
+                    self.binary,
+                    timeout=self.timeout,
+                    driver_env={"CUA_DRIVER_RS_ENABLE_WAYLAND": None},
+                )
+            return self._x11_backend
 
     @staticmethod
     def _x11_windows() -> list[dict[str, Any]]:
@@ -298,6 +365,7 @@ class CuaDriverBackend:
                     state = self._call("get_window_state", {
                         "pid": window["pid"], "window_id": window["window_id"],
                         "include_screenshot": False, "max_elements": 300, "max_depth": 20,
+                        "timeout_ms": self._accessibility_timeout_ms,
                     })
                     if state.get("isError") is not True:
                         structured = self._structured(state)
@@ -329,33 +397,55 @@ class CuaDriverBackend:
         return self._structured(self._call("get_cursor_position"))
 
     def screenshot(self) -> dict[str, Any]:
-        try:
-            result = self._call("get_desktop_state")
-        except Exception as exc:
-            result = {"isError": True, "content": [{"type": "text", "text": str(exc)}]}
-        structured = self._structured(result)
-        images = [i for i in result.get("content", []) if isinstance(i, dict) and i.get("type") == "image"]
+        result: dict[str, Any] = {"isError": True, "content": [{"type": "text", "text": "no capture attempted"}]}
+        structured: dict[str, Any] = {}
+        images: list[dict[str, Any]] = []
         capture_scope = "desktop"
-        if not images:
-            # Recovery rung: a full-display grab can fail on XWayland while a
-            # specific application window remains capturable. Never pretend a
-            # window capture is a desktop capture.
-            windows = self._windows()
-            for window in windows:
+        fallback_errors: list[str] = []
+
+        def try_window_capture(candidates: list[dict[str, Any]], backend: CuaDriverBackend) -> None:
+            nonlocal result, structured, images, capture_scope
+            for window in candidates:
                 if not isinstance(window, dict) or not isinstance(window.get("pid"), int) or not isinstance(window.get("window_id"), int):
                     continue
+                fallback: dict[str, Any] = {}
                 try:
-                    fallback = self._call("get_window_state", {
+                    fallback = backend._call_window_state({
                         "pid": window["pid"], "window_id": window["window_id"],
                         "include_screenshot": True, "max_elements": 300, "max_depth": 20,
                     })
                     candidate = [i for i in fallback.get("content", []) if isinstance(i, dict) and i.get("type") == "image"]
                     if candidate:
                         result, structured, images, capture_scope = fallback, self._structured(fallback), candidate, "window"
-                        break
-                except Exception:
-                    continue
+                        return
+                    error = self._structured(fallback).get("screenshot_error")
+                    if error:
+                        fallback_errors.append(json.dumps(error, sort_keys=True))
+                except Exception as exc:
+                    error = self._structured(fallback).get("screenshot_error") or str(exc)
+                    if error:
+                        fallback_errors.append(str(error)[:800])
+
+        # Sommelier's full-display X11 grab is unreliable, while a validated
+        # XWayland application window remains capturable. Prefer the narrow
+        # window path and never label it as a desktop capture.
+        x11_windows = self._x11_windows()
+        if x11_windows:
+            try_window_capture(x11_windows, self._x11_capture_backend())
+
         if not images:
+            try:
+                result = self._call("get_desktop_state")
+            except Exception as exc:
+                result = {"isError": True, "content": [{"type": "text", "text": str(exc)}]}
+            structured = self._structured(result)
+            images = [i for i in result.get("content", []) if isinstance(i, dict) and i.get("type") == "image"]
+
+        if not images and not x11_windows:
+            try_window_capture(self._windows(), self)
+        if not images:
+            if fallback_errors:
+                raise RuntimeError("window capture unavailable: " + fallback_errors[-1][:800])
             raise RuntimeError(self._error_text(result))
         image = images[0]
         data = str(image.get("data", ""))
@@ -374,6 +464,18 @@ class CuaDriverBackend:
         return value
 
     def action(self, action: str, arguments: dict[str, Any]) -> dict[str, Any]:
+        if action == "click_element":
+            allowed = {
+                key: arguments[key]
+                for key in (
+                    "pid", "window_id", "element_index", "element_token",
+                    "snapshot_id", "delivery_mode", "session",
+                )
+                if key in arguments
+            }
+            allowed.setdefault("delivery_mode", "background")
+            return {"ok": True, "backend": self.name, "action": action,
+                    "driver": self._structured(self._call("click", allowed))}
         mapping = {
             "move": "move_cursor", "click": "click", "double_click": "double_click",
             "right_click": "right_click", "scroll": "scroll", "type": "type_text",
@@ -387,6 +489,9 @@ class CuaDriverBackend:
 
     def close(self) -> None:
         with self._lock:
+            if self._x11_backend is not None:
+                self._x11_backend.close()
+                self._x11_backend = None
             if self._proc is not None:
                 try:
                     if self._proc.stdin:
@@ -412,9 +517,36 @@ def _finite(value: Any, name: str) -> float:
 
 
 def _validate_action(action: str, arguments: dict[str, Any]) -> dict[str, Any]:
-    if action not in {"move", "click", "double_click", "right_click", "scroll", "type", "hotkey", "drag", "wait"}:
+    if action not in {"move", "click", "click_element", "double_click", "right_click", "scroll", "type", "hotkey", "drag", "wait"}:
         raise ValueError(f"unsupported desktop action: {action}")
     value = dict(arguments)
+    if action == "click_element":
+        try:
+            value["pid"] = int(value.get("pid"))
+        except (TypeError, ValueError) as exc:
+            raise ValueError("click_element requires a positive pid") from exc
+        if value["pid"] <= 0:
+            raise ValueError("click_element requires a positive pid")
+        if not value.get("element_token") and value.get("element_index") is None:
+            raise ValueError("click_element requires element_token or element_index")
+        if value.get("element_index") is not None:
+            try:
+                value["element_index"] = int(value["element_index"])
+            except (TypeError, ValueError) as exc:
+                raise ValueError("element_index must be an integer") from exc
+            if value["element_index"] < 0 and not value.get("element_token"):
+                raise ValueError("element_index must be non-negative")
+            if not value.get("element_token") and not value.get("snapshot_id"):
+                raise ValueError("snapshot_id is required with element_index")
+        if value.get("window_id") is not None:
+            try:
+                value["window_id"] = int(value["window_id"])
+            except (TypeError, ValueError) as exc:
+                raise ValueError("window_id must be an integer") from exc
+        delivery = str(value.get("delivery_mode", "background")).casefold()
+        if delivery not in {"background", "foreground"}:
+            raise ValueError("delivery_mode must be background or foreground")
+        value["delivery_mode"] = delivery
     if action in {"move", "click", "double_click", "right_click"}:
         value["x"], value["y"] = _finite(value.get("x"), "x"), _finite(value.get("y"), "y")
     if action == "scroll":
@@ -576,6 +708,15 @@ class DesktopController:
         elif kind == "active_window_contains":
             needle = str(expected).casefold()
             value = any(needle in str(w.get("title", "")).casefold() for w in observed.get("windows", []) if isinstance(w, dict))
+        elif kind in {"accessibility_contains", "accessibility_not_contains"}:
+            needle = str(expected).casefold()
+            elements = (observed.get("accessibility") or {}).get("elements", [])
+            haystack = " ".join(
+                " ".join(str(element.get(field, "")) for field in ("label", "value", "description", "role"))
+                for element in elements if isinstance(element, dict)
+            ).casefold()
+            contains = needle in haystack
+            value = contains if kind == "accessibility_contains" else not contains
         elif kind == "screenshot_changed":
             prior = self._last_screenshot_hash
             shot = self.screenshot(include_image=False)
@@ -607,7 +748,10 @@ def build_controller() -> DesktopController:
     audit_path = Path(os.environ.get("AEGIS_DESKTOP_AUDIT", str(ROOT / ".jarvis" / "desktop_audit.jsonl")))
     backend: Backend
     candidate = os.environ.get("AEGIS_CUA_DRIVER")
-    if candidate or shutil.which("cua-driver") or (Path.home() / ".hermes/tools/cua-driver-0.21.0-linux-x64/cua-driver").exists():
+    managed_driver = Path.home() / ".local/bin/cua-driver"
+    package_driver = Path.home() / ".cua-driver/packages/current/cua-driver"
+    hermes_driver = Path.home() / ".hermes/tools/cua-driver-0.21.0-linux-x64/cua-driver"
+    if candidate or shutil.which("cua-driver") or managed_driver.exists() or package_driver.exists() or hermes_driver.exists():
         backend = CuaDriverBackend(candidate)
     else:
         backend = UnavailableBackend("no supported desktop backend found; install cua-driver or configure AEGIS_CUA_DRIVER")

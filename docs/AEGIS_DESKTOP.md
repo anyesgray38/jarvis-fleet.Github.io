@@ -19,7 +19,8 @@ The service exposes:
 - `GET /observe` — screen, pointer, windows, and accessibility summary.
 - `GET /screenshot?include_image=true` — bounded base64 PNG when capture works.
 - `POST /action` — `move`, `click`, `double_click`, `right_click`, `scroll`,
-  `type`, `hotkey`, `drag`, and bounded `wait`.
+  `click_element`, `type`, `hotkey`, `drag`, and bounded `wait`. The semantic
+  click requires a fresh CUA accessibility `element_token` and positive pid.
 - `POST /verify` — bounded predicates, never arbitrary code.
 - `POST /stop` — emergency stop, always allowed.
 - `POST /resume` — requires `confirm=true` and `desktop_control` enabled.
@@ -75,12 +76,16 @@ window. The command is gated by `desktop_control`, navigates only to YouTube,
 and verifies that the selected video is actively playing before it succeeds.
 
 The host can be degraded without the service being broken. On this
-ChromeOS/Sommelier session, native Wayland browser surfaces can be launched,
-but the installed CUA driver cannot discover or capture them. The governed
-screen-level CUA path therefore requires an XWayland browser
+ChromeOS/Sommelier session, CUA driver 0.30.4 discovers native Wayland browser
+surfaces and their AT-SPI trees, so semantic observation and exact accessibility
+actions are available. Sommelier still does not expose compositor-attested
+native screencopy or target-addressable raw input; the governed screen-level
+capture/pointer path therefore requires an XWayland browser
 (`AEGIS_BROWSER_PLATFORM=x11`) until a supported compositor adapter is
-available. AEGIS receives that state explicitly and must re-observe or
-recover rather than guessing.
+available. The runtime isolates that X11 screenshot path in a helper CUA
+session while preserving the native-Wayland session for accessibility actions.
+AEGIS receives the capability state explicitly and must re-observe or recover
+rather than guessing.
 
 ## Chrome diagnostics agent
 
