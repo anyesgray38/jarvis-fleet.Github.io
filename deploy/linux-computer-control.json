@@ -2,6 +2,15 @@
   "version": 1,
   "profile": "linux-computer-control",
   "purpose": "Minimal Linux execution profile for observable, governed computer control.",
+  "host_dependencies": {
+    "debian_packages": [
+      "at-spi2-core"
+    ],
+    "user_services": [
+      "at-spi-dbus-bus.service"
+    ],
+    "browser_display": "X11"
+  },
   "entrypoints": {
     "desktop_runtime": "desktop_runtime.py",
     "mcp_bridge": "hermes_mcp_server.py",

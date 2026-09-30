@@ -108,14 +108,24 @@ class DesktopRuntimeTests(unittest.TestCase):
             },
             "content": [image],
         }
-        with patch.object(backend, "_call", side_effect=[RuntimeError("desktop capture failed"), {
-            "structuredContent": {"windows": [{"pid": 1234, "window_id": 99}]}
-        }, state]):
+        with patch.object(backend, "_x11_windows", return_value=[]), patch.object(
+            backend, "_call", side_effect=[RuntimeError("desktop capture failed"), {
+                "structuredContent": {"windows": [{"pid": 1234, "window_id": 99}]}
+            }, state]
+        ):
             screenshot = backend.screenshot()
         self.assertTrue(screenshot["ok"])
         self.assertEqual(screenshot["capture_scope"], "window")
         self.assertEqual(screenshot["width"], 1200)
         self.assertEqual(screenshot["height"], 691)
+
+    def test_x11_windows_are_preferred_before_native_enumerator(self):
+        backend = CuaDriverBackend(timeout=5)
+        x11 = [{"pid": 1234, "window_id": 99, "title": "Browser"}]
+        with patch.object(backend, "_x11_windows", return_value=x11), patch.object(
+            backend, "_call", side_effect=AssertionError("native list_windows must not run")
+        ):
+            self.assertEqual(backend._windows(), x11)
 
 
 if __name__ == "__main__":

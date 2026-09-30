@@ -258,6 +258,12 @@ class CuaDriverBackend:
         return windows
 
     def _windows(self) -> list[dict[str, Any]]:
+        # On XWayland/ChromeOS the native enumerator can block while Chromium
+        # is publishing accessibility state. The X11 tree is bounded and
+        # already gives us the pid/window_id needed for capture and input.
+        x11_windows = self._x11_windows()
+        if x11_windows:
+            return x11_windows
         windows_result = self._call("list_windows")
         windows = self._structured(windows_result).get("windows", [])
         if not isinstance(windows, list):
@@ -270,7 +276,7 @@ class CuaDriverBackend:
         ]
         if usable:
             return windows
-        return windows + self._x11_windows()
+        return windows
 
     def observe(self) -> dict[str, Any]:
         with self._lock:
@@ -278,7 +284,10 @@ class CuaDriverBackend:
             self._screen_size = size
             cursor = self._structured(self._call("get_cursor_position"))
             windows = self._windows()
-            tree_result = self._call("get_accessibility_tree")
+            try:
+                tree_result = self._call("get_accessibility_tree")
+            except Exception as exc:
+                tree_result = {"content": [{"type": "text", "text": str(exc)[:500]}]}
             elements: list[dict[str, Any]] = []
             accessibility_error = "no window with a usable pid/window_id was discovered"
             accessibility_degraded = False

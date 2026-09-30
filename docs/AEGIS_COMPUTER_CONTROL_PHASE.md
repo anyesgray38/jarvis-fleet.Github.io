@@ -29,13 +29,19 @@ Observed directly during the rebuild:
 
 - `127.0.0.1:8894` is already supervised by the desktop runtime service.
 - The CUA driver is present and reports a `1371x771` display.
+- The Debian AT-SPI runtime is installed and `org.a11y.Bus` is active for the
+  user session.
+- A real X11 Chromium window was discovered with its pid/window id, and the
+  accessibility result returned `degraded: false` with live elements.
 - A harmless pointer move completed and `pointer_at` verification returned
   `satisfied: true`.
 - Safety gates are active; sensitive typing is blocked by policy.
-- Full screenshot capture and accessibility are currently degraded. The CUA
-  driver sees only its cursor overlay and reports an X11 capture error. The
-  running Chromium process is using Wayland; the Wayland/X11 mismatch is the
-  current working diagnosis, not a confirmed root cause.
+- Full-display capture can still fail on this XWayland session, so the runtime
+  records and verifies a window-scoped PNG capture instead of labeling it as a
+  desktop capture.
+- The native CUA window enumerator can block while Chromium publishes
+  accessibility state. The runtime therefore prefers bounded X11 discovery
+  whenever a validated X11 window is present.
 
 ## Acceptance criteria
 
@@ -60,6 +66,15 @@ AEGIS_BROWSER_CDP_PORT=9222 ./scripts/start_control_browser.sh about:blank
 The launcher keeps its profile outside the repository, forces X11, disables
 GPU initialization, and leaves sandboxing enabled by default. Set
 `AEGIS_BROWSER_NO_SANDBOX=1` only when the host requires it.
+
+The host also needs the AT-SPI runtime so element-level observation is
+available. On Debian-based hosts, install `at-spi2-core`; the tracked user
+service requests `at-spi-dbus-bus.service` automatically. Verify the session
+bus with:
+
+```bash
+busctl --user list | grep org.a11y.Bus
+```
 
 ## Cleanup boundary
 

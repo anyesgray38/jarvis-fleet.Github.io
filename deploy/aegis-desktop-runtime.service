@@ -1,7 +1,7 @@
 [Unit]
 Description=AEGIS governed desktop-control runtime
-After=graphical-session.target
-Wants=graphical-session.target
+After=graphical-session.target at-spi-dbus-bus.service
+Wants=graphical-session.target at-spi-dbus-bus.service
 
 [Service]
 Type=simple
