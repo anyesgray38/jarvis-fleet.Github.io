@@ -33,6 +33,9 @@ Observed directly during the rebuild:
   user session.
 - A real X11 Chromium window was discovered with its pid/window id, and the
   accessibility result returned `degraded: false` with live elements.
+- A native Wayland Chromium process launches with `--ozone-platform=wayland`,
+  but the installed CUA driver does not discover that surface on this
+  compositor; no native Wayland computer-control success is claimed.
 - A harmless pointer move completed and `pointer_at` verification returned
   `satisfied: true`.
 - Safety gates are active; sensitive typing is blocked by policy.
@@ -42,6 +45,12 @@ Observed directly during the rebuild:
 - The native CUA window enumerator can block while Chromium publishes
   accessibility state. The runtime therefore prefers bounded X11 discovery
   whenever a validated X11 window is present.
+- This ChromeOS/Sommelier compositor does not expose the native Wayland
+  toplevel, screencopy, or input protocols required by the installed CUA
+  driver. Native Wayland is therefore the browser/CDP mode; governed
+  screen-level control uses the explicit X11/XWayland fallback until a
+  supported compositor adapter is available. Browser-specific CDP use still
+  requires an independent endpoint health check.
 
 ## Acceptance criteria
 
@@ -60,12 +69,21 @@ Computer control is considered usable only when all of these are evidenced:
 Start a browser that the X11 fallback can observe:
 
 ```bash
-AEGIS_BROWSER_CDP_PORT=9222 ./scripts/start_control_browser.sh about:blank
+AEGIS_BROWSER_PLATFORM=wayland AEGIS_BROWSER_CDP_PORT=9222 \
+  ./scripts/start_control_browser.sh about:blank
 ```
 
-The launcher keeps its profile outside the repository, forces X11, disables
-GPU initialization, and leaves sandboxing enabled by default. Set
-`AEGIS_BROWSER_NO_SANDBOX=1` only when the host requires it.
+The launcher keeps its profile outside the repository, uses native Wayland by
+default, disables GPU initialization, and leaves sandboxing enabled by
+default. Set `AEGIS_BROWSER_NO_SANDBOX=1` only when the host requires it.
+
+For screen-level AEGIS control on this host, launch the browser through
+XWayland explicitly:
+
+```bash
+AEGIS_BROWSER_PLATFORM=x11 AEGIS_BROWSER_CDP_PORT=9222 \
+  ./scripts/start_control_browser.sh about:blank
+```
 
 The host also needs the AT-SPI runtime so element-level observation is
 available. On Debian-based hosts, install `at-spi2-core`; the tracked user

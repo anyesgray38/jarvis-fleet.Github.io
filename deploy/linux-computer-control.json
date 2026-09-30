@@ -9,7 +9,10 @@
     "user_services": [
       "at-spi-dbus-bus.service"
     ],
-    "browser_display": "X11"
+    "browser_display": {
+      "preferred": "Wayland",
+      "desktop_control_fallback": "X11/XWayland"
+    }
   },
   "entrypoints": {
     "desktop_runtime": "desktop_runtime.py",

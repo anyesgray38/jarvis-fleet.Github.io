@@ -1,10 +1,31 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [[ -z "${DISPLAY:-}" ]]; then
-  echo "DISPLAY is required for the governed X11 browser" >&2
-  exit 2
-fi
+platform="${AEGIS_BROWSER_PLATFORM:-wayland}"
+launch_env=(env)
+
+case "$platform" in
+  wayland)
+    if [[ -z "${WAYLAND_DISPLAY:-}" || -z "${XDG_RUNTIME_DIR:-}" ]]; then
+      echo "WAYLAND_DISPLAY and XDG_RUNTIME_DIR are required for the native Wayland browser" >&2
+      exit 2
+    fi
+    launch_env+=(DISPLAY=)
+    ozone_platform="wayland"
+    ;;
+  x11)
+    if [[ -z "${DISPLAY:-}" ]]; then
+      echo "DISPLAY is required for the X11/XWayland browser" >&2
+      exit 2
+    fi
+    launch_env+=(WAYLAND_DISPLAY=)
+    ozone_platform="x11"
+    ;;
+  *)
+    echo "AEGIS_BROWSER_PLATFORM must be wayland or x11" >&2
+    exit 2
+    ;;
+esac
 
 browser="${AEGIS_CHROMIUM_BIN:-}"
 if [[ -z "$browser" ]]; then
@@ -28,7 +49,7 @@ window_size="${AEGIS_BROWSER_WINDOW_SIZE:-1200,800}"
 mkdir -p "$profile"
 
 args=(
-  "--ozone-platform=x11"
+  "--ozone-platform=${ozone_platform}"
   "--disable-gpu"
   "--disable-dev-shm-usage"
   "--no-first-run"
@@ -42,4 +63,4 @@ if [[ "${AEGIS_BROWSER_NO_SANDBOX:-0}" == "1" ]]; then
 fi
 
 url="${1:-about:blank}"
-exec env WAYLAND_DISPLAY= "$browser" "${args[@]}" "$url"
+exec "${launch_env[@]}" "$browser" "${args[@]}" "$url"

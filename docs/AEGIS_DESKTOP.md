@@ -74,10 +74,13 @@ select a tab, and `--min-minutes` / `--max-minutes` to change the duration
 window. The command is gated by `desktop_control`, navigates only to YouTube,
 and verifies that the selected video is actively playing before it succeeds.
 
-The host can be degraded without the service being broken. For example, on a
-Wayland/XWayland session the CUA driver may report screen dimensions and a
-pointer while screenshot capture or AT-SPI is unavailable. AEGIS receives
-that state explicitly and must re-observe or recover rather than guessing.
+The host can be degraded without the service being broken. On this
+ChromeOS/Sommelier session, native Wayland browser surfaces can be launched,
+but the installed CUA driver cannot discover or capture them. The governed
+screen-level CUA path therefore requires an XWayland browser
+(`AEGIS_BROWSER_PLATFORM=x11`) until a supported compositor adapter is
+available. AEGIS receives that state explicitly and must re-observe or
+recover rather than guessing.
 
 ## Chrome diagnostics agent
 
