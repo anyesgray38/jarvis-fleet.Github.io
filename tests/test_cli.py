@@ -10,7 +10,7 @@ from jarvis.cli import BANNER, build_parser, main
 class CliTests(unittest.TestCase):
     def test_parser_exposes_control_plane_commands(self):
         parser = build_parser()
-        for command in ("status", "ask", "run", "plan", "simulate", "inspect", "safety", "toggle", "capabilities", "agents", "providers", "logs", "memory", "doctor"):
+        for command in ("status", "ask", "run", "plan", "simulate", "inspect", "safety", "toggle", "capabilities", "agents", "providers", "logs", "memory", "doctor", "diagnose"):
             argv = [command] + (["x"] if command in {"ask", "inspect", "plan", "simulate"} else [])
             if command == "run":
                 argv += ["x", "--capability", "core.task_orchestration"]
@@ -18,6 +18,8 @@ class CliTests(unittest.TestCase):
                 argv += ["--capability", "core.task_orchestration"]
             elif command == "toggle":
                 argv += ["shell_execution", "on"]
+            elif command == "diagnose":
+                argv += ["chrome"]
             args = parser.parse_args(argv)
             self.assertEqual(args.command, command)
 

@@ -22,6 +22,12 @@ from urllib.parse import quote_plus, urlsplit
 from urllib.request import Request, urlopen
 
 from security.safety import SafetyController, SafetySettings
+from security.browser_sanitizer import (
+    BrowserSanitizationError,
+    sanitize_cdp_url,
+    sanitize_youtube_navigation_url,
+    sanitize_youtube_results,
+)
 
 
 DEFAULT_CDP_URL = os.environ.get("AEGIS_CHROME_CDP_URL", "http://127.0.0.1:9222").rstrip("/")
@@ -35,9 +41,12 @@ class ChromeControlError(RuntimeError):
 
 def _http_json(base_url: str, path: str) -> Any:
     try:
+        base_url = sanitize_cdp_url(base_url)
         request = Request(base_url.rstrip("/") + path, headers={"Accept": "application/json"})
         with urlopen(request, timeout=4) as response:
             return json.loads(response.read(2_000_000).decode("utf-8"))
+    except BrowserSanitizationError as exc:
+        raise ChromeControlError(f"unsafe Chrome DevTools endpoint: {exc}") from exc
     except Exception as exc:
         raise ChromeControlError(
             f"Chrome DevTools endpoint unavailable at {base_url}; start Chrome with remote debugging "
@@ -150,7 +159,10 @@ class _WebSocket:
 
 class ChromeSession:
     def __init__(self, cdp_url: str = DEFAULT_CDP_URL, target: str = ""):
-        self.cdp_url = cdp_url.rstrip("/")
+        try:
+            self.cdp_url = sanitize_cdp_url(cdp_url)
+        except BrowserSanitizationError as exc:
+            raise ChromeControlError(f"unsafe Chrome DevTools endpoint: {exc}") from exc
         raw_targets = _http_json(self.cdp_url, "/json/list")
         targets = [
             item for item in raw_targets
@@ -180,7 +192,11 @@ class ChromeSession:
         return value
 
     def navigate(self, url: str) -> None:
-        self.ws.call("Page.navigate", {"url": url})
+        try:
+            safe_url = sanitize_youtube_navigation_url(url)
+        except BrowserSanitizationError as exc:
+            raise ChromeControlError(f"unsafe browser navigation: {exc}") from exc
+        self.ws.call("Page.navigate", {"url": safe_url})
 
     def wait_for(self, expression: str, timeout: float = 20.0) -> Any:
         deadline = time.monotonic() + timeout
@@ -212,7 +228,7 @@ def _results(session: ChromeSession) -> list[dict[str, str]]:
         .filter(x => x.title && x.href && x.href.includes('watch?v='));
       return rows.length ? rows.slice(0, 20) : null;
     })()""", 25)
-    return value if isinstance(value, list) else []
+    return sanitize_youtube_results(value)
 
 
 def _play_video(session: ChromeSession) -> dict[str, Any] | None:
@@ -275,4 +291,8 @@ def play_bedtime_music(
 
 
 def self_target(session: ChromeSession) -> dict[str, str]:
-    return {"title": str(session.target.get("title", "")), "url": str(session.target.get("url", ""))}
+    try:
+        url = sanitize_youtube_navigation_url(str(session.target.get("url", "")))
+    except BrowserSanitizationError:
+        url = ""
+    return {"title": str(session.target.get("title", ""))[:240], "url": url}

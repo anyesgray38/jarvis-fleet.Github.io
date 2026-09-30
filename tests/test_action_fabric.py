@@ -10,8 +10,17 @@ class ActionFabricTests(unittest.TestCase):
         fabric = default_fabric()
         self.assertEqual(
             fabric.available(),
-            ["builder.run", "filesystem.read", "filesystem.write", "project.build", "project.create", "project.test", "website.create"],
+            ["builder.run", "chrome.diagnose", "filesystem.read", "filesystem.write", "project.build", "project.create", "project.test", "website.create"],
         )
+
+    def test_chrome_diagnostics_action_is_read_only_and_actionable(self):
+        with tempfile.TemporaryDirectory() as directory:
+            result = default_fabric().execute(
+                "chrome.diagnose", {"cdp_url": "http://127.0.0.1:1"}, ActionContext("task-1", Path(directory))
+            )
+            self.assertTrue(result.output["ok"])
+            self.assertTrue(result.output["read_only"])
+            self.assertIn(result.output["status"], {"blocked", "degraded", "ready"})
 
     def test_write_and_read_stay_inside_workspace(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -1,5 +1,5 @@
 {
-  "version": 12,
+  "version": 13,
   "purpose": "Domain-agnostic capability registry for AEGIS",
   "capabilities": [
     {
@@ -143,6 +143,27 @@
       "verification": [
         "task_state",
         "visual_check"
+      ]
+    },
+    {
+      "id": "core.chrome_diagnostics",
+      "provider": "aegis",
+      "kind": "core",
+      "tags": [
+        "chrome",
+        "browser",
+        "diagnostics",
+        "debugging",
+        "devtools",
+        "cdp"
+      ],
+      "execution": "agent",
+      "action": "chrome.diagnose",
+      "verification": [
+        "endpoint_probe",
+        "browser_presence",
+        "actionable_diagnosis",
+        "read_only"
       ]
     },
     {

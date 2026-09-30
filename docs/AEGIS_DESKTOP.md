@@ -78,3 +78,27 @@ The host can be degraded without the service being broken. For example, on a
 Wayland/XWayland session the CUA driver may report screen dimensions and a
 pointer while screenshot capture or AT-SPI is unavailable. AEGIS receives
 that state explicitly and must re-observe or recover rather than guessing.
+
+## Chrome diagnostics agent
+
+The read-only Chrome Diagnostician checks the local DevTools endpoint,
+browser-process presence, and executable availability without starting,
+stopping, or modifying a browser:
+
+```bash
+python3 -m jarvis.cli diagnose chrome
+```
+
+Use `--json` for machine-readable evidence, `--cdp-url` for a non-default
+DevTools endpoint, or `--browser-binary` when the browser executable is not on
+`PATH`. The capability is registered as `core.chrome_diagnostics` and routes to
+the debugging skill for governed agent workflows.
+
+### Browser sanitation boundary
+
+Browser content is untrusted data. AEGIS validates that CDP remains loopback
+only, restricts the governed YouTube workflow to HTTPS results/watch URLs,
+canonicalizes video links, bounds page-derived text, and ignores non-YouTube or
+duplicate result rows. Playwright profiles and reports should remain outside
+the repository; `.venv/`, `.firecrawl/`, `playwright-report/`, `test-results/`,
+and browser state files are ignored by the build.

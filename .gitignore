@@ -4,3 +4,9 @@ __pycache__/
 .jarvis/
 deploy/.env
 actions-runner/
+.venv/
+.firecrawl/
+playwright-report/
+test-results/
+browser-artifacts/
+storage_state*.json

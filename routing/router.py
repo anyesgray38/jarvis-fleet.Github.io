@@ -62,11 +62,11 @@ class SkillRouter:
     def _skill_for(terms: set[str], skills: set[str]) -> str | None:
         aliases = (
             ("builder", {"builder", "app", "scaffold"}),
+            ("debugging", {"debugging", "repair"}),
             ("website-operation", {"website", "browser", "web"}),
             ("github-research", {"github", "repository", "research"}),
             ("coding", {"coding", "software", "frontend"}),
             ("testing", {"testing", "tests", "verification"}),
-            ("debugging", {"debugging", "repair"}),
             ("computer-use", {"computer", "terminal"}),
         )
         for skill, triggers in aliases:

@@ -75,6 +75,12 @@ def build_parser()->argparse.ArgumentParser:
     bedtime.add_argument("--query",default="one hour bedtime music")
     bedtime.add_argument("--min-minutes",type=int,default=45)
     bedtime.add_argument("--max-minutes",type=int,default=90)
+    diagnose=sub.add_parser("diagnose",help="run read-only specialist diagnostics")
+    dcs=diagnose.add_subparsers(dest="diagnose_command")
+    dchrome=dcs.add_parser("chrome",help="diagnose Chrome/Chromium and its DevTools endpoint")
+    dchrome.add_argument("--cdp-url",default=os.getenv("AEGIS_CHROME_CDP_URL","http://127.0.0.1:9222"))
+    dchrome.add_argument("--browser-binary",default="",help="optional browser executable or path")
+    dchrome.add_argument("--timeout",type=float,default=3.0)
     scan=sub.add_parser("business-scan",help="discover and research businesses in a public geographic target")
     scan.add_argument("target")
     scan.add_argument("--category",default="")
@@ -151,6 +157,13 @@ def _chrome(args):
     except (ChromeControlError, PermissionError, ValueError) as exc:
         return _emit(args,{"ok":False,"error":str(exc)}) or 1
     return _emit(args,result,text=f"Playing: {result['title']} ({result['duration_minutes']} minutes)")
+def _diagnose(args):
+    if args.diagnose_command != "chrome": raise ValueError("diagnose command is required")
+    from jarvis.chrome_diagnostics import ChromeDiagnosticsAgent
+    result=ChromeDiagnosticsAgent().diagnose(cdp_url=args.cdp_url,browser_binary=args.browser_binary,timeout=args.timeout)
+    text=result["diagnosis"]
+    if result["recommendations"]: text += "\n" + "\n".join(f"- {item}" for item in result["recommendations"])
+    return _emit(args,result,text=text)
 def _doctor(args):
     checks={"python":sys.version.split()[0],"repository_root":ROOT.exists(),"security_policy":DEFAULT_POLICY.exists(),"safety_controls":True,"capability_registry":Path(args.capabilities).exists(),"evidence_directory":(ROOT/"evidence").exists()}
     checks["healthy"]=all(v is True for k,v in checks.items() if k!="python");return checks
@@ -233,7 +246,11 @@ def _knowledge(args):
     with urlopen(request,timeout=60) as response:
         return _emit(args,json.loads(response.read(2_000_000).decode()))
 def _run(args):
-    e=_envelope(args);task={"task_id":e.task_id,"objective":e.objective,"capability":e.capability,"trust_required":int(e.trust_required),"input":e.input,"verification":getattr(args,"verification",{})}
+    e=_envelope(args)
+    verification=getattr(args,"verification",None)
+    if verification is None:
+        verification={"required":True,"checks":["diagnostic_result"]} if args.capability=="core.chrome_diagnostics" else {}
+    task={"task_id":e.task_id,"objective":e.objective,"capability":e.capability,"trust_required":int(e.trust_required),"input":e.input,"verification":verification}
     if not args.execute:return _emit(args,task,text=f"DRY RUN\nTask: {e.task_id}\nCapability: {e.capability}\nUse --execute to dispatch through AEGIS.")
     security=_load_json(Path(args.security_json)) if args.security_json else {"execution_successful":True,"risk_score":0,"severity":"LOW","approved":True}
     if not isinstance(security,dict):raise ValueError("--security-json must contain a JSON object")
@@ -248,6 +265,7 @@ def _run(args):
         "evidence": lambda _t, result: (isinstance(result, dict), "result captured"),
         "scope_check": lambda _t, _result: (workspace == Path.cwd().resolve(), "execution workspace is current directory"),
         "result_audit": lambda _t, result: (isinstance(result.get("returncode"), int), "command returned a process status"),
+        "diagnostic_result": lambda _t, result: (result.get("ok") is True and result.get("read_only") is True, "read-only diagnostic completed"),
     }
     result=Dispatcher(registry,Policy(DEFAULT_POLICY),executor,checks=checks,safety=_settings(args)).dispatch(task,security=security)
     return _emit(args,result.__dict__)
@@ -287,6 +305,7 @@ def execute(args):
     if args.command=="project":return _project(args)
     if args.command=="desktop":return _desktop(args)
     if args.command=="chrome":return _chrome(args)
+    if args.command=="diagnose":return _diagnose(args)
     if args.command=="business-scan":return _business_scan(args)
     if args.command=="builder":return _builder(args)
     if args.command=="prospect":return _prospect(args)

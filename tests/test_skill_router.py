@@ -7,7 +7,7 @@ from routing import SkillRouter
 class SkillRouterTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(); root = Path(self.tmp.name)
-        (root / "capabilities").mkdir(); (root / "skills" / "coding").mkdir(parents=True); (root / "skills" / "website-operation").mkdir()
+        (root / "capabilities").mkdir(); (root / "skills" / "coding").mkdir(parents=True); (root / "skills" / "website-operation").mkdir(); (root / "skills" / "debugging").mkdir()
         registry = {"capabilities": [
             {"id":"core.software_engineering","provider":"aegis","kind":"core","tags":["coding","repository","testing"],"verification":["tests"]},
             {"id":"core.website_generation","provider":"aegis","kind":"core","tags":["website","frontend","coding"],"verification":["browser_check"]},
@@ -19,5 +19,15 @@ class SkillRouterTests(unittest.TestCase):
     def test_security_route_requires_authorization(self):
         security=next(x for x in self.router.route("security configuration review") if x.capability_id=="security.configuration_review"); self.assertTrue(security.requires_authorization); self.assertIn("evidence",security.verification)
     def test_unknown_objective_fails_closed(self): self.assertEqual(self.router.route("zyxwv unrelated"),[])
+
+    def test_debugging_skill_takes_precedence_for_diagnostic_browser_tasks(self):
+        registry = self.tmp.name + "/capabilities/registry.json"
+        payload = json.loads(Path(registry).read_text())
+        payload["capabilities"].append({"id":"core.chrome_diagnostics","provider":"aegis","kind":"core","tags":["chrome","browser","debugging"],"verification":["evidence"]})
+        Path(registry).write_text(json.dumps(payload))
+        router = SkillRouter(registry, Path(self.tmp.name) / "skills")
+        result = router.route("figure out why Chrome DevTools is unavailable")
+        self.assertEqual(result[0].capability_id, "core.chrome_diagnostics")
+        self.assertEqual(result[0].skill, "debugging")
 
 if __name__=="__main__": unittest.main()

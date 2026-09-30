@@ -117,6 +117,22 @@ def shell_execute(context: ActionContext, args: dict[str, Any]) -> dict[str, Any
     }
 
 
+def chrome_diagnose(context: ActionContext, args: dict[str, Any]) -> dict[str, Any]:
+    """Run the read-only Chrome diagnostician through the action fabric."""
+    from jarvis.chrome_diagnostics import ChromeDiagnosticsAgent, DEFAULT_CDP_URL
+
+    cdp_url = str(args.get("cdp_url", DEFAULT_CDP_URL))
+    browser_binary = str(args.get("browser_binary", ""))
+    timeout = float(args.get("timeout", 3.0))
+    if timeout <= 0 or timeout > 30:
+        raise ActionError("timeout must be greater than 0 and no more than 30 seconds")
+    return ChromeDiagnosticsAgent().diagnose(
+        cdp_url=cdp_url,
+        browser_binary=browser_binary,
+        timeout=timeout,
+    )
+
+
 def default_fabric() -> ActionFabric:
     from .builder import builder_run, project_build, project_create, project_test
     from .website import website_create
@@ -129,4 +145,5 @@ def default_fabric() -> ActionFabric:
     fabric.register("project.build", project_build)
     fabric.register("project.test", project_test)
     fabric.register("builder.run", builder_run)
+    fabric.register("chrome.diagnose", chrome_diagnose)
     return fabric
