@@ -12,6 +12,30 @@ The dashboard reads telemetry through the server-side `/api/control-plane` proxy
 
 The proxy reads `/health`, `/agents`, and `/jobs` and never exposes the upstream URL or credentials to browser JavaScript. If the variable is absent or the upstream is unreachable, the dashboard explicitly shows a disconnected state instead of inventing telemetry.
 
+## Governed Chromium control
+
+The server-side `/api/browser` route uses `playwright-core` to attach to an
+already-running Chromium CDP endpoint. It exposes `GET` status and the
+bounded `POST` actions `goto`, `click`, `type`, `screenshot`, and
+`disconnect`. The endpoint must be loopback-only; navigation allows HTTPS and
+loopback HTTP, and password/secret fields remain blocked by AEGIS policy.
+
+Browser control is opt-in and disabled by default. To enable it in the web
+service, set `AEGIS_BROWSER_CONTROL_ENABLED=true` and point
+`AEGIS_CHROME_CDP_URL` at a loopback endpoint such as
+`http://127.0.0.1:9222`. Also set a strong, server-side
+`AEGIS_BROWSER_CONTROL_TOKEN`; every browser-control request must include it
+as `Authorization: Bearer <token>`. Launch Chromium with a separate profile:
+
+```bash
+google-chrome --remote-debugging-port=9222 \
+  --user-data-dir=/run/user/1000/aegis-chrome
+```
+
+The CDP browser session is kept outside the repository and is never sent to
+client-side JavaScript. The route is intended for the governed AEGIS agent
+surface, not for exposing raw CDP to a browser.
+
 ## Shark After Dark business operations
 
 The `Shark Ops` workspace is an optional server-side integration with the Shark After Dark API. Set `SHARK_API_URL` to the private API service URL and `SHARK_ADMIN_KEY` to the matching server-side admin key. The browser only talks to `/api/shark`; it never receives the admin key or calls the Shark API directly.
