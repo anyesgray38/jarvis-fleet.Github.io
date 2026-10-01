@@ -5,8 +5,10 @@
 actions-runner
 deploy/.env
 .next
+web/.next
 node_modules
 web/node_modules
+.venv
 __pycache__
 *.pyc
 *.log
