@@ -46,7 +46,7 @@ fi
 
 if ! grep -q '^AEGIS_MEMORY_TOKEN=' deploy/.env \
   || grep -Eq '^AEGIS_MEMORY_TOKEN=(|replace-with-a-memory-runtime-secret)$' deploy/.env; then
-  memory_token="$(dd if=/dev/urandom bs=32 count=1 2>/dev/null | od -An -tx1 | tr -d ' \\n')"
+  memory_token="$(dd if=/dev/urandom bs=32 count=1 2>/dev/null | od -An -tx1 | tr -d ' \n')"
   if grep -q '^AEGIS_MEMORY_TOKEN=' deploy/.env; then
     sed -i "s/^AEGIS_MEMORY_TOKEN=.*/AEGIS_MEMORY_TOKEN=${memory_token}/" deploy/.env
   else
@@ -56,7 +56,7 @@ fi
 
 if ! grep -q '^AEGIS_PROSPECT_TOKEN=' deploy/.env \
   || grep -Eq '^AEGIS_PROSPECT_TOKEN=(|replace-with-a-prospecting-runtime-secret)$' deploy/.env; then
-  prospect_token="$(dd if=/dev/urandom bs=32 count=1 2>/dev/null | od -An -tx1 | tr -d ' \\n')"
+  prospect_token="$(dd if=/dev/urandom bs=32 count=1 2>/dev/null | od -An -tx1 | tr -d ' \n')"
   if grep -q '^AEGIS_PROSPECT_TOKEN=' deploy/.env; then
     sed -i "s/^AEGIS_PROSPECT_TOKEN=.*/AEGIS_PROSPECT_TOKEN=${prospect_token}/" deploy/.env
   else
