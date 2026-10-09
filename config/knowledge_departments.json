@@ -58,5 +58,27 @@
     "urls": [],
     "cadence_minutes": 360,
     "enabled": true
+  },
+  {
+    "id": "aws-cloud-storage",
+    "name": "AWS Cloud Storage",
+    "manager": "Vault",
+    "search_command": "AWS S3 EBS EFS Backup storage security lifecycle and cost guidance",
+    "capabilities": ["core.web_research", "knowledge.research_cycle"],
+    "topics": [
+      "Amazon S3 security lifecycle storage classes and recovery",
+      "Amazon EBS snapshots and EC2 storage",
+      "Amazon EFS shared Linux storage",
+      "AWS Backup and cloud storage cost controls"
+    ],
+    "queries": ["current AWS cloud storage architecture security lifecycle and recovery guidance"],
+    "urls": [
+      "https://docs.aws.amazon.com/AmazonS3/latest/userguide/Welcome.html",
+      "https://docs.aws.amazon.com/ebs/latest/userguide/what-is-ebs.html",
+      "https://docs.aws.amazon.com/efs/latest/ug/whatisefs.html",
+      "https://docs.aws.amazon.com/aws-backup/latest/devguide/whatisbackup.html"
+    ],
+    "cadence_minutes": 720,
+    "enabled": true
   }
 ]
