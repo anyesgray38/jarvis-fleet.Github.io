@@ -94,7 +94,8 @@ class FirecrawlMcpAdapter:
             "onlyMainContent": only_main_content,
         })
         data = self._text_payload(result)
-        content = data.get("markdown") or data.get("content") or ""
+        html_content = data.get("html") or data.get("rawHtml") or ""
+        content = data.get("markdown") or data.get("content") or html_content or ""
         if not content and formats and "links" in formats:
             content = data.get("summary") or ""
         if not content:
@@ -103,6 +104,7 @@ class FirecrawlMcpAdapter:
             "title": data.get("metadata", {}).get("title") or url,
             "url": data.get("metadata", {}).get("url") or url,
             "content": content,
+            "html": html_content,
             "links": data.get("links", []),
             "metadata": data.get("metadata", {}),
             "provider": "firecrawl-mcp",

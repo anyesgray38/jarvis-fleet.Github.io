@@ -1,7 +1,8 @@
-"""Resilient public research transport: admitted Firecrawl first, HTTP fallback second."""
+"""Public research transport with cloud scraping as the production default."""
 from __future__ import annotations
 
 import html
+import os
 import re
 from html.parser import HTMLParser
 from urllib.parse import quote, urlparse
@@ -62,9 +63,14 @@ class HttpSearchFallback:
 
 
 class ResilientWebResearch:
-    def __init__(self, primary: FirecrawlMcpAdapter | None = None) -> None:
+    def __init__(self, primary: FirecrawlMcpAdapter | None = None, *, allow_local_fallback: bool | None = None) -> None:
         self.primary = primary or FirecrawlMcpAdapter()
         self.fallback = HttpSearchFallback()
+        self.allow_local_fallback = (
+            allow_local_fallback
+            if allow_local_fallback is not None
+            else os.environ.get("AEGIS_SCRAPING_ALLOW_LOCAL_FALLBACK", "0").lower() in {"1", "true", "yes", "on"}
+        )
         self.last_transport = "none"
         self.last_error: str | None = None
 
@@ -76,6 +82,8 @@ class ResilientWebResearch:
             return rows
         except Exception as primary_error:
             self.last_error = str(primary_error)
+            if not self.allow_local_fallback:
+                raise RuntimeError(f"cloud research search failed; local fallback is disabled: {primary_error}") from primary_error
             try:
                 rows = self.fallback.search(query, limit=limit, location=location)
                 self.last_transport = "direct-http-search"
@@ -91,6 +99,8 @@ class ResilientWebResearch:
             return result
         except Exception as primary_error:
             self.last_error = str(primary_error)
+            if not self.allow_local_fallback:
+                raise RuntimeError(f"cloud research scrape failed; local fallback is disabled: {primary_error}") from primary_error
             try:
                 result = self.fallback.scrape(url, formats=formats, only_main_content=only_main_content)
                 self.last_transport = "direct-http"
@@ -99,4 +109,10 @@ class ResilientWebResearch:
                 raise RuntimeError(f"research scrape failed via Firecrawl MCP and HTTP fallback: {primary_error}; fallback: {fallback_error}") from fallback_error
 
     def status(self) -> dict:
-        return {"primary": self.primary.status(), "last_transport": self.last_transport, "last_error": self.last_error, "fallback": "direct-http"}
+        return {
+            "primary": self.primary.status(),
+            "last_transport": self.last_transport,
+            "last_error": self.last_error,
+            "fallback": "direct-http" if self.allow_local_fallback else "disabled",
+            "cloud_only": not self.allow_local_fallback,
+        }

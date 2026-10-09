@@ -1,0 +1,162 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  Private AEGIS EC2 host. The instance has no inbound security-group rules;
+  administer it through AWS Systems Manager and expose the application through
+  the existing Tailscale Serve deployment.
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC for the AEGIS host.
+  SubnetId:
+    Type: AWS::EC2::Subnet::Id
+    Description: Subnet with outbound internet access for package and Tailscale traffic.
+  InstanceType:
+    Type: String
+    Default: m7i-flex.large
+    AllowedPattern: '^[a-z0-9][a-z0-9-]*\.[a-z0-9]+$'
+    Description: x86_64 instance type. m7i-flex.large is a reasonable starting point for the Compose stack.
+  RootVolumeSizeGiB:
+    Type: Number
+    Default: 80
+    MinValue: 40
+    MaxValue: 16384
+    Description: Encrypted EBS root volume. Docker volumes live on this durable volume.
+  KeyName:
+    Type: String
+    Default: ''
+    Description: Optional break-glass EC2 key pair. Prefer SSM Session Manager for normal access.
+  AssociatePublicIpAddress:
+    Type: String
+    Default: 'true'
+    AllowedValues: ['true', 'false']
+    Description: Set false when the subnet has NAT or another egress path.
+  LatestAmiSsmPath:
+    Type: String
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
+    Description: Public SSM parameter for the Amazon Linux 2023 x86_64 AMI.
+
+Conditions:
+  HasKeyName:
+    Fn::Not:
+      - Fn::Equals:
+          - Ref: KeyName
+          - ''
+  UsePublicIp:
+    Fn::Equals:
+      - Ref: AssociatePublicIpAddress
+      - 'true'
+
+Resources:
+  AegisSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: AEGIS private host; access is outbound-only via SSM and Tailscale.
+      VpcId: !Ref VpcId
+      SecurityGroupIngress: []
+      SecurityGroupEgress:
+        - IpProtocol: '-1'
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: aegis-private-host
+
+  AegisInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub aegis-ec2-${AWS::StackName}
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      Tags:
+        - Key: Name
+          Value: aegis-ec2-role
+
+  AegisInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref AegisInstanceRole
+
+  AegisInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Sub '{{resolve:ssm:${LatestAmiSsmPath}}}'
+      InstanceType: !Ref InstanceType
+      IamInstanceProfile: !Ref AegisInstanceProfile
+      KeyName:
+        Fn::If:
+          - HasKeyName
+          - Ref: KeyName
+          - Ref: AWS::NoValue
+      MetadataOptions:
+        HttpEndpoint: enabled
+        HttpTokens: required
+        HttpPutResponseHopLimit: 1
+      NetworkInterfaces:
+        - DeviceIndex: '0'
+          SubnetId: !Ref SubnetId
+          GroupSet:
+            - !Ref AegisSecurityGroup
+          AssociatePublicIpAddress:
+            Fn::If:
+              - UsePublicIp
+              - true
+              - false
+          DeleteOnTermination: true
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: !Ref RootVolumeSizeGiB
+            VolumeType: gp3
+            Encrypted: true
+            DeleteOnTermination: true
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          set -euxo pipefail
+
+          dnf install -y docker git
+          systemctl enable --now docker
+          usermod -aG docker ec2-user
+
+          compose_version=v5.6.0
+          install -d -m 0755 /usr/local/lib/docker/cli-plugins
+          curl -fsSL "https://github.com/docker/compose/releases/download/${compose_version}/docker-compose-linux-x86_64" \
+            -o /usr/local/lib/docker/cli-plugins/docker-compose
+          chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+
+          install -d -m 0750 /opt/aegis
+          cat >/opt/aegis/README-AWS-HOST.txt <<'EOF'
+          This host was provisioned for AEGIS.
+
+          Next steps:
+          1. Connect with AWS Systems Manager Session Manager.
+          2. Install/configure Tailscale.
+          3. Clone the jarvis-fleet repository into /opt/aegis/jarvis-fleet.
+          4. Run deploy/tailscale-up.sh from that checkout.
+          EOF
+
+          touch /opt/aegis/cloud-init-complete
+      Tags:
+        - Key: Name
+          Value: aegis-control-plane
+        - Key: ManagedBy
+          Value: cloudformation
+
+Outputs:
+  InstanceId:
+    Description: EC2 instance ID for SSM Session Manager.
+    Value: !Ref AegisInstance
+  SecurityGroupId:
+    Description: Security group with no inbound rules.
+    Value: !Ref AegisSecurityGroup
+  PrivateIp:
+    Description: Private address of the AEGIS host.
+    Value: !GetAtt AegisInstance.PrivateIp

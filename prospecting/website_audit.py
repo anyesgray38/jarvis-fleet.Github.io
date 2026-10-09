@@ -80,8 +80,25 @@ def fetch_html(url: str, *, timeout: float = 12.0, limit: int = 1_500_000) -> di
         return {"status_code": None, "final_url": url, "content_type": "", "html": "", "error": str(exc)}
 
 
-def audit_website(url: str, *, business: BusinessRecord | None = None) -> dict[str, Any]:
-    observed = fetch_html(url)
+def audit_website(url: str, *, business: BusinessRecord | None = None, scraper: Any | None = None) -> dict[str, Any]:
+    provider = "direct-http"
+    if scraper is None:
+        observed = fetch_html(url)
+    else:
+        provider = "firecrawl-mcp"
+        try:
+            remote = scraper.scrape(url, formats=["html", "links"], only_main_content=False)
+            metadata = remote.get("metadata", {}) if isinstance(remote, dict) else {}
+            markup = str(remote.get("html") or remote.get("content") or "") if isinstance(remote, dict) else ""
+            observed = {
+                "status_code": metadata.get("statusCode") or metadata.get("status_code") or (200 if markup else None),
+                "final_url": (remote.get("url") if isinstance(remote, dict) else None) or url,
+                "content_type": metadata.get("contentType") or metadata.get("content_type") or "text/html",
+                "html": markup,
+                "error": None if markup else "cloud scraper returned no page content",
+            }
+        except Exception as exc:
+            observed = {"status_code": None, "final_url": url, "content_type": "", "html": "", "error": str(exc)}
     markup = observed.get("html", "")
     parser = PageParser()
     if markup:
@@ -136,7 +153,7 @@ def audit_website(url: str, *, business: BusinessRecord | None = None) -> dict[s
         "business_information": {"phone": has_phone, "address": has_address, "hours": has_hours, "services": has_services},
         "conversion": {"cta_count": len(ctas), "ctas": ctas, "contact_form": parser.forms > 0, "booking": "book" in ctas or "appointment" in ctas, "online_ordering": "order online" in ctas, "directions": "directions" in ctas},
         "findings": findings,
-        "evidence": [Evidence(source=url, observation=f"Fetched HTTP {observed.get('status_code')}; parsed {len(markup)} HTML characters.", interpretation="Website characteristics below are parser observations, not commercial predictions.", confidence="high", data={"final_url": final_url, "content_type": observed.get("content_type", "")}).to_dict()],
+        "evidence": [Evidence(source=url, observation=f"Fetched via {provider} (HTTP {observed.get('status_code')}); parsed {len(markup)} HTML characters.", interpretation="Website characteristics below are parser observations, not commercial predictions.", confidence="high", data={"final_url": final_url, "content_type": observed.get("content_type", ""), "provider": provider}).to_dict()],
     }
     if not audit["reachable"] and observed.get("error"):
         audit["findings"].insert(0, f"Fetch failed: {observed['error']}")

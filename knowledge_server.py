@@ -21,6 +21,7 @@ from urllib.request import Request, urlopen
 from knowledge.brain import KnowledgeBrain, load_department_plans
 from knowledge.reverse_engineer import reverse_engineer_source
 from mcp.firecrawl import FirecrawlMcpAdapter
+from openai_cloud_archive import OpenAICloudArchive
 
 BIND = os.environ.get("AEGIS_KNOWLEDGE_BIND", "127.0.0.1")
 PORT = int(os.environ.get("AEGIS_KNOWLEDGE_PORT", "8892"))
@@ -126,6 +127,7 @@ class KnowledgeStore:
         DATA_ROOT.mkdir(parents=True, exist_ok=True)
         ARCHIVE_ROOT.mkdir(parents=True, exist_ok=True)
         self.lock = threading.RLock()
+        self.cloud_archive = OpenAICloudArchive()
         self.data = self._load()
 
     def _load(self) -> dict:
@@ -164,6 +166,8 @@ class KnowledgeStore:
                 "events_7d": len(recent),
                 "words_archived": total_words,
                 "active_memory_mode": "distilled_packets",
+                "full_source_storage": "openai_files" if self.cloud_archive.enabled else "local_archive",
+                "cloud_archive_enabled": self.cloud_archive.enabled,
             },
             "sources": sorted(sources, key=lambda item: item.get("updated_at", ""), reverse=True)[:30],
             "events": sorted(events, key=lambda item: item.get("created_at", ""), reverse=True)[:20],
@@ -200,8 +204,14 @@ class KnowledgeStore:
         if reverse_engineering["status"] != "verified_for_compaction":
             raise ValueError("source failed provenance verification")
         source_id = hashlib.sha256(f"{provider}|{source_url}".encode("utf-8")).hexdigest()[:16]
+        cloud_file: dict[str, object] | None = None
         archive_path = ARCHIVE_ROOT / f"{source_id}.md"
-        archive_path.write_text(content, encoding="utf-8")
+        if self.cloud_archive.enabled:
+            cloud_file = self.cloud_archive.upload_text(f"{source_id}.md", content)
+            archive_path_value = ""
+        else:
+            archive_path.write_text(content, encoding="utf-8")
+            archive_path_value = str(archive_path.relative_to(DATA_ROOT))
         created_at = utc_now()
         content_hash = hashlib.sha256(content.encode("utf-8", errors="replace")).hexdigest()
         packet = {
@@ -218,7 +228,9 @@ class KnowledgeStore:
             "claim_count": len(reverse_engineering["claims"]),
             "word_count": len(content.split()),
             "content_hash": content_hash,
-            "archive_path": str(archive_path.relative_to(DATA_ROOT)),
+            "archive_path": archive_path_value,
+            "cloud_file_id": cloud_file.get("id") if cloud_file else None,
+            "archive_storage": "openai_files" if cloud_file else "local_files",
             "updated_at": created_at,
             "full_source_available": True,
             "reverse_engineering": reverse_engineering,
@@ -286,7 +298,7 @@ class KnowledgeStore:
             item["relevance"] = score
             if include_content:
                 archive = DATA_ROOT / str(source.get("archive_path", ""))
-                if archive.resolve().is_relative_to(DATA_ROOT.resolve()) and archive.exists():
+                if source.get("archive_storage") == "local_files" and archive.resolve().is_relative_to(DATA_ROOT.resolve()) and archive.exists():
                     item["content"] = archive.read_text(encoding="utf-8")[:200_000]
             ranked.append((score, item))
         ranked.sort(key=lambda pair: (pair[0], pair[1].get("updated_at", "")), reverse=True)
@@ -408,6 +420,11 @@ class Handler(BaseHTTPRequestHandler):
                 return
             source_path = ARCHIVE_ROOT / f"{source_id}.md"
             if not source_path.exists():
+                with STORE.lock:
+                    source = next((item for item in STORE.data.get("sources", []) if item.get("id") == source_id), None)
+                if source and source.get("archive_storage") == "openai_files" and source.get("cloud_file_id"):
+                    self.send_json(200, {"ok": True, "id": source_id, "archive_storage": "openai_files", "cloud_file_id": source["cloud_file_id"], "content": None})
+                    return
                 self.send_json(404, {"ok": False, "error": "source not found"})
                 return
             self.send_json(200, {"ok": True, "id": source_id, "content": source_path.read_text(encoding="utf-8")})

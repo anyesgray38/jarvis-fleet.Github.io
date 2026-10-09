@@ -36,7 +36,7 @@ class BusinessResearcher:
             record.website = self._select_official_candidate(record, search_rows)
         if record.website:
             try:
-                record.website_audit = audit_website(record.website, business=record)
+                record.website_audit = audit_website(record.website, business=record, scraper=self.client)
                 record.website_state = "CONFIRMED" if record.website_audit.get("reachable") else "LIKELY"
                 record.evidence.extend(record.website_audit.get("evidence", []))
             except Exception as exc:

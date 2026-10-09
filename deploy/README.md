@@ -35,6 +35,13 @@ Persistent Docker volumes:
 
 Tailscale Serve exposes a local service to the tailnet while keeping it unavailable to the public internet. Tailscale's access-control policies also apply to the served service.
 
+## AWS EC2 option
+
+The same private deployment can run on AWS EC2. The CloudFormation template and
+operator guide are in [`deploy/aws/`](aws/). The stack creates a host with no
+inbound security-group rules; use AWS Systems Manager for administration and
+Tailscale Serve for application access.
+
 ## Deploy
 
 On the always-on Linux host:
@@ -89,9 +96,9 @@ The authenticated prospecting runtime listens on localhost `8893` and stores sca
 python3 -m jarvis business-scan "US-19 Thomaston Georgia" --max-results 10 --generate 1
 ```
 
-The workflow records corridor evidence, normalizes duplicates, researches public websites and social profiles, audits observable HTML characteristics, assigns an explainable digital-opportunity score, and generates private concept pages only for qualified records. If Firecrawl MCP is unavailable or rate-limited, it falls back to bounded direct HTTP search/scraping where possible and reports the degradation; an empty fallback is never treated as proof that a website does not exist. Configure `AEGIS_PROSPECT_SOURCE_URLS` for known public municipal/chamber directories. Concept pages are explicitly marked as private demonstrations and are not published or sent to businesses automatically.
+The workflow records corridor evidence, normalizes duplicates, researches public websites and social profiles, audits observable HTML characteristics, assigns an explainable digital-opportunity score, and generates private concept pages only for qualified records. Production scraping is cloud-only through Firecrawl MCP, so browser/HTTP scraping memory stays off the AEGIS host. Set `AEGIS_SCRAPING_ALLOW_LOCAL_FALLBACK=1` only for an intentional diagnostic run; the default is disabled. An empty result is never treated as proof that a website does not exist. Configure `AEGIS_PROSPECT_SOURCE_URLS` for known public municipal/chamber directories. Concept pages are explicitly marked as private demonstrations and are not published or sent to businesses automatically.
 
-The knowledge runtime binds to localhost on port `8892`. Wikipedia search works without an external key. Firecrawl web intake uses the admitted official MCP endpoint; keyless use is bounded, while `FIRECRAWL_API_KEY` or `FIRECRAWL_OAUTH_TOKEN` can be set in the untracked `deploy/.env` for authenticated limits. Credentials are never sent to browser JavaScript. Department research policy lives in `config/knowledge_departments.json`; the runtime performs bounded due-work cycles, stores compact packets locally, archives full source text, and exposes authenticated `/search`, `/departments`, and `/research` endpoints. Legacy comma-separated `AEGIS_KNOWLEDGE_WIKI_TOPICS` and `AEGIS_KNOWLEDGE_WEB_SOURCES` are routed into Web Intelligence.
+The knowledge runtime binds to localhost on port `8892`. Wikipedia search works without an external key. Firecrawl web intake uses the admitted official MCP endpoint; keyless use is bounded, while `FIRECRAWL_API_KEY` or `FIRECRAWL_OAUTH_TOKEN` can be set in the untracked `deploy/.env` for authenticated limits. Credentials are never sent to browser JavaScript. Department research policy lives in `config/knowledge_departments.json`; the runtime performs bounded due-work cycles, stores compact packets locally, and archives full source text locally by default. Set `AEGIS_KNOWLEDGE_CLOUD_ARCHIVE=1` with `OPENAI_API_KEY` and `OPENAI_PROJECT_ID` to upload full public source text to OpenAI Files (`purpose=user_data`) and keep only the distilled packet plus cloud file ID locally. Legacy comma-separated `AEGIS_KNOWLEDGE_WIKI_TOPICS` and `AEGIS_KNOWLEDGE_WEB_SOURCES` are routed into Web Intelligence.
 
 Knowledge is stored in the persistent `aegis-knowledge` volume. Active memory keeps compact distilled packets and metadata; full source text is archived separately and can only be retrieved through the authenticated knowledge service when needed.
 
