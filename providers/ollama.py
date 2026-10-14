@@ -30,14 +30,14 @@ class OllamaProvider:
     def __init__(self, config: OllamaConfig) -> None:
         self.config = config
 
-    def _request(self, method: str, path: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+    def _request(self, method: str, path: str, payload: dict[str, Any] | None = None, *, timeout: float | None = None) -> dict[str, Any]:
         body = None if payload is None else json.dumps(payload).encode("utf-8")
         headers = {"Accept": "application/json"}
         if body is not None:
             headers["Content-Type"] = "application/json"
         request = Request(self.config.api_base + path, data=body, headers=headers, method=method)
         try:
-            with urlopen(request, timeout=self.config.timeout) as response:
+            with urlopen(request, timeout=self.config.timeout if timeout is None else timeout) as response:
                 raw = response.read().decode("utf-8")
         except (HTTPError, URLError, TimeoutError) as exc:
             raise OllamaError(f"ollama request failed: {exc}") from exc
@@ -50,7 +50,7 @@ class OllamaProvider:
         return result
 
     def models(self) -> list[dict[str, Any]]:
-        models = self._request("GET", "/tags").get("models", [])
+        models = self._request("GET", "/tags", timeout=min(self.config.timeout, 3.0)).get("models", [])
         if not isinstance(models, list):
             return []
         return [{"id": item["name"]} for item in models if isinstance(item, dict) and isinstance(item.get("name"), str)]

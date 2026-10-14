@@ -1,0 +1,382 @@
+{
+  "schema": "aegis.study.v1",
+  "subject": "The Inner Circle Trader — 2022 Mentorship",
+  "channel_url": "https://www.youtube.com/@InnerCircleTrader",
+  "playlist_url": "https://www.youtube.com/playlist?list=PLVgHx4Z63paYiFGQ56PjTF1PGePL3r69s",
+  "observed_date": "2026-10-09",
+  "inventory_source": "Official playlist DOM inspected using Playwright",
+  "status": "blocked_local_inference",
+  "background_worker_running": false,
+  "completed_lessons": 0,
+  "lessons": [
+    {
+      "episode": 1,
+      "title": "ICT Mentorship 2022 Introduction",
+      "video_id": "kt6V4ai60fI",
+      "url": "https://www.youtube.com/watch?v=kt6V4ai60fI",
+      "status": "partial_transcript_review",
+      "chart_verified": false,
+      "model_reviewed": false
+    },
+    {
+      "episode": 2,
+      "title": "2022 ICT Mentorship Episode 2",
+      "video_id": "tmeCWULSTHc",
+      "url": "https://www.youtube.com/watch?v=tmeCWULSTHc",
+      "status": "partial_transcript_review",
+      "chart_verified": false,
+      "model_reviewed": false
+    },
+    {
+      "episode": 3,
+      "title": "2022 ICT Mentorship Episode 3",
+      "video_id": "nQfHZ2DEJ8c",
+      "url": "https://www.youtube.com/watch?v=nQfHZ2DEJ8c",
+      "status": "partial_transcript_review",
+      "chart_verified": false,
+      "model_reviewed": false
+    },
+    {
+      "episode": 4,
+      "title": "2022 ICT Mentorship Episode 4",
+      "video_id": "L-ReMHiavPM",
+      "url": "https://www.youtube.com/watch?v=L-ReMHiavPM",
+      "status": "not_started",
+      "chart_verified": false,
+      "model_reviewed": false
+    },
+    {
+      "episode": 5,
+      "title": "2022 ICT Mentorship Episode 5",
+      "video_id": "N29ZJ-o31xs",
+      "url": "https://www.youtube.com/watch?v=N29ZJ-o31xs",
+      "status": "not_started",
+      "chart_verified": false,
+      "model_reviewed": false
+    },
+    {
+      "episode": 6,
+      "title": "2022 ICT Mentorship Episode 6",
+      "video_id": "Bkt8B3kLATQ",
+      "url": "https://www.youtube.com/watch?v=Bkt8B3kLATQ",
+      "status": "not_started",
+      "chart_verified": false,
+      "model_reviewed": false
+    },
+    {
+      "episode": 7,
+      "title": "2022 ICT Mentorship Episode 7",
+      "video_id": "G8-z91acgG4",
+      "url": "https://www.youtube.com/watch?v=G8-z91acgG4",
+      "status": "not_started",
+      "chart_verified": false,
+      "model_reviewed": false
+    },
+    {
+      "episode": 8,
+      "title": "2022 ICT Mentorship Episode 8",
+      "video_id": "7rbV8aWkcqY",
+      "url": "https://www.youtube.com/watch?v=7rbV8aWkcqY",
+      "status": "not_started",
+      "chart_verified": false,
+      "model_reviewed": false
+    },
+    {
+      "episode": 9,
+      "title": "2022 ICT Mentorship Episode 9",
+      "video_id": "iZLXnNiZm_s",
+      "url": "https://www.youtube.com/watch?v=iZLXnNiZm_s",
+      "status": "not_started",
+      "chart_verified": false,
+      "model_reviewed": false
+    },
+    {
+      "episode": 10,
+      "title": "2022 ICT Mentorship Episode 10",
+      "video_id": "S9ORTYmXwdE",
+      "url": "https://www.youtube.com/watch?v=S9ORTYmXwdE",
+      "status": "not_started",
+      "chart_verified": false,
+      "model_reviewed": false
+    },
+    {
+      "episode": 11,
+      "title": "2022 ICT Mentorship Episode 11",
+      "video_id": "Sqw2bww93Zo",
+      "url": "https://www.youtube.com/watch?v=Sqw2bww93Zo",
+      "status": "not_started",
+      "chart_verified": false,
+      "model_reviewed": false
+    },
+    {
+      "episode": 12,
+      "title": "2022 ICT Mentorship Episode 12",
+      "video_id": "8GkQfdAXZP0",
+      "url": "https://www.youtube.com/watch?v=8GkQfdAXZP0",
+      "status": "not_started",
+      "chart_verified": false,
+      "model_reviewed": false
+    },
+    {
+      "episode": 13,
+      "title": "2022 ICT Mentorship Episode 13",
+      "video_id": "tpPtItWqmlg",
+      "url": "https://www.youtube.com/watch?v=tpPtItWqmlg",
+      "status": "not_started",
+      "chart_verified": false,
+      "model_reviewed": false
+    },
+    {
+      "episode": 14,
+      "title": "2022 ICT Mentorship Episode 14",
+      "video_id": "NUdu1n-ML98",
+      "url": "https://www.youtube.com/watch?v=NUdu1n-ML98",
+      "status": "not_started",
+      "chart_verified": false,
+      "model_reviewed": false
+    },
+    {
+      "episode": 15,
+      "title": "2022 ICT Mentorship Episode 15",
+      "video_id": "tGxuitjtO88",
+      "url": "https://www.youtube.com/watch?v=tGxuitjtO88",
+      "status": "not_started",
+      "chart_verified": false,
+      "model_reviewed": false
+    },
+    {
+      "episode": 16,
+      "title": "2022 ICT Mentorship Episode 16",
+      "video_id": "EpGQnhjXBq8",
+      "url": "https://www.youtube.com/watch?v=EpGQnhjXBq8",
+      "status": "not_started",
+      "chart_verified": false,
+      "model_reviewed": false
+    },
+    {
+      "episode": 17,
+      "title": "2022 ICT Mentorship Episode 17",
+      "video_id": "5WIqHJDQ_p4",
+      "url": "https://www.youtube.com/watch?v=5WIqHJDQ_p4",
+      "status": "not_started",
+      "chart_verified": false,
+      "model_reviewed": false
+    },
+    {
+      "episode": 18,
+      "title": "2022 ICT Mentorship Episode 18",
+      "video_id": "eai0nHhAC8w",
+      "url": "https://www.youtube.com/watch?v=eai0nHhAC8w",
+      "status": "not_started",
+      "chart_verified": false,
+      "model_reviewed": false
+    },
+    {
+      "episode": 19,
+      "title": "2022 ICT Mentorship Episode 19",
+      "video_id": "IEa1N0rTtbc",
+      "url": "https://www.youtube.com/watch?v=IEa1N0rTtbc",
+      "status": "not_started",
+      "chart_verified": false,
+      "model_reviewed": false
+    },
+    {
+      "episode": 20,
+      "title": "2022 ICT Mentorship Episode 20",
+      "video_id": "Q6GFu8-Z4rY",
+      "url": "https://www.youtube.com/watch?v=Q6GFu8-Z4rY",
+      "status": "not_started",
+      "chart_verified": false,
+      "model_reviewed": false
+    },
+    {
+      "episode": 21,
+      "title": "2022 ICT Mentorship Episode 21",
+      "video_id": "kmVXVJE08eQ",
+      "url": "https://www.youtube.com/watch?v=kmVXVJE08eQ",
+      "status": "not_started",
+      "chart_verified": false,
+      "model_reviewed": false
+    },
+    {
+      "episode": 22,
+      "title": "2022 ICT Mentorship Episode 22",
+      "video_id": "QKc_i90chVg",
+      "url": "https://www.youtube.com/watch?v=QKc_i90chVg",
+      "status": "not_started",
+      "chart_verified": false,
+      "model_reviewed": false
+    },
+    {
+      "episode": 23,
+      "title": "2022 ICT Mentorship Episode 23",
+      "video_id": "TV9TfwHXuqs",
+      "url": "https://www.youtube.com/watch?v=TV9TfwHXuqs",
+      "status": "not_started",
+      "chart_verified": false,
+      "model_reviewed": false
+    },
+    {
+      "episode": 24,
+      "title": "2022 ICT Mentorship Episode 24",
+      "video_id": "nv0ey5UyOmY",
+      "url": "https://www.youtube.com/watch?v=nv0ey5UyOmY",
+      "status": "not_started",
+      "chart_verified": false,
+      "model_reviewed": false
+    },
+    {
+      "episode": 25,
+      "title": "2022 ICT Mentorship Episode 25",
+      "video_id": "CnTXwAuDi9Y",
+      "url": "https://www.youtube.com/watch?v=CnTXwAuDi9Y",
+      "status": "not_started",
+      "chart_verified": false,
+      "model_reviewed": false
+    },
+    {
+      "episode": 26,
+      "title": "2022 ICT Mentorship Episode 26 - Example Of Tape Reading Practice",
+      "video_id": "k26euOG6zAk",
+      "url": "https://www.youtube.com/watch?v=k26euOG6zAk",
+      "status": "not_started",
+      "chart_verified": false,
+      "model_reviewed": false
+    },
+    {
+      "episode": 27,
+      "title": "2022 ICT Mentorship Episode 27 - Counter Trend Ideas",
+      "video_id": "gLK4Qm6jte8",
+      "url": "https://www.youtube.com/watch?v=gLK4Qm6jte8",
+      "status": "not_started",
+      "chart_verified": false,
+      "model_reviewed": false
+    },
+    {
+      "episode": 28,
+      "title": "2022 ICT Mentorship Episode 28",
+      "video_id": "j0Z2EbuJXGU",
+      "url": "https://www.youtube.com/watch?v=j0Z2EbuJXGU",
+      "status": "not_started",
+      "chart_verified": false,
+      "model_reviewed": false
+    },
+    {
+      "episode": 29,
+      "title": "2022 ICT Mentorship Episode 29",
+      "video_id": "QkokVv0owSE",
+      "url": "https://www.youtube.com/watch?v=QkokVv0owSE",
+      "status": "not_started",
+      "chart_verified": false,
+      "model_reviewed": false
+    },
+    {
+      "episode": 30,
+      "title": "2022 ICT Mentorship Episode 30",
+      "video_id": "CL94EnGqB4Q",
+      "url": "https://www.youtube.com/watch?v=CL94EnGqB4Q",
+      "status": "not_started",
+      "chart_verified": false,
+      "model_reviewed": false
+    },
+    {
+      "episode": 31,
+      "title": "2022 ICT Mentorship Episode 31",
+      "video_id": "OYNpIeu9czw",
+      "url": "https://www.youtube.com/watch?v=OYNpIeu9czw",
+      "status": "not_started",
+      "chart_verified": false,
+      "model_reviewed": false
+    },
+    {
+      "episode": 32,
+      "title": "2022 ICT Mentorship Episode 32",
+      "video_id": "hzoMJQlEv5M",
+      "url": "https://www.youtube.com/watch?v=hzoMJQlEv5M",
+      "status": "not_started",
+      "chart_verified": false,
+      "model_reviewed": false
+    },
+    {
+      "episode": 33,
+      "title": "2022 ICT Mentorship Episode 33",
+      "video_id": "8z6My18WZqA",
+      "url": "https://www.youtube.com/watch?v=8z6My18WZqA",
+      "status": "not_started",
+      "chart_verified": false,
+      "model_reviewed": false
+    },
+    {
+      "episode": 34,
+      "title": "2022 ICT Mentorship Episode 34",
+      "video_id": "t8flQP5jy-Q",
+      "url": "https://www.youtube.com/watch?v=t8flQP5jy-Q",
+      "status": "not_started",
+      "chart_verified": false,
+      "model_reviewed": false
+    },
+    {
+      "episode": 35,
+      "title": "2022 ICT Mentorship Episode 35",
+      "video_id": "MdYrslpUezU",
+      "url": "https://www.youtube.com/watch?v=MdYrslpUezU",
+      "status": "not_started",
+      "chart_verified": false,
+      "model_reviewed": false
+    },
+    {
+      "episode": 36,
+      "title": "2022 ICT Mentorship Episode 36",
+      "video_id": "pWnMpdN_g98",
+      "url": "https://www.youtube.com/watch?v=pWnMpdN_g98",
+      "status": "not_started",
+      "chart_verified": false,
+      "model_reviewed": false
+    },
+    {
+      "episode": 37,
+      "title": "2022 ICT Mentorship Episode 37",
+      "video_id": "HuZurY0ghDI",
+      "url": "https://www.youtube.com/watch?v=HuZurY0ghDI",
+      "status": "not_started",
+      "chart_verified": false,
+      "model_reviewed": false
+    },
+    {
+      "episode": 38,
+      "title": "2022 ICT Mentorship Episode 38",
+      "video_id": "36184dDAqtM",
+      "url": "https://www.youtube.com/watch?v=36184dDAqtM",
+      "status": "not_started",
+      "chart_verified": false,
+      "model_reviewed": false
+    },
+    {
+      "episode": 39,
+      "title": "2022 ICT Mentorship Episode 39",
+      "video_id": "yFpHbBnsK_c",
+      "url": "https://www.youtube.com/watch?v=yFpHbBnsK_c",
+      "status": "not_started",
+      "chart_verified": false,
+      "model_reviewed": false
+    },
+    {
+      "episode": 40,
+      "title": "2022 ICT Mentorship Episode 40",
+      "video_id": "koN1ge8bewI",
+      "url": "https://www.youtube.com/watch?v=koN1ge8bewI",
+      "status": "not_started",
+      "chart_verified": false,
+      "model_reviewed": false
+    },
+    {
+      "episode": 41,
+      "title": "2022 ICT Mentorship - Episode 41 & Final",
+      "video_id": "2XhDi5GoNUI",
+      "url": "https://www.youtube.com/watch?v=2XhDi5GoNUI",
+      "status": "not_started",
+      "chart_verified": false,
+      "model_reviewed": false
+    }
+  ]
+}

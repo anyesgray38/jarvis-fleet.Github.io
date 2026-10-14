@@ -24,6 +24,7 @@
           "on_failure": {"enum": ["stop", "continue", "escalate"]},
           "verification": {"type": "object"},
           "constraints": {"type": "object"}
+          ,"trust_required": {"type": "integer", "minimum": 0, "maximum": 5}
         },
         "additionalProperties": false
       }

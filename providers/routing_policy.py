@@ -16,6 +16,7 @@ class RoutingRequest:
     max_cost_per_1k_tokens: float | None = None
     purpose: str = "general"
     metadata: dict[str, Any] = field(default_factory=dict)
+    preferred_model: str | None = None
 
 
 @dataclass(frozen=True)
@@ -27,6 +28,8 @@ class CandidateScore:
 
 
 def score_candidate(provider: dict[str, Any], model: dict[str, Any], request: RoutingRequest) -> CandidateScore | None:
+    if request.preferred_model and model.get("id") != request.preferred_model:
+        return None
     policy = provider.get("policy", {})
     provider_modalities = set(provider.get("modalities", []))
     model_modalities = set(model.get("modalities", []))

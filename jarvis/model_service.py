@@ -28,12 +28,16 @@ EVIDENCE_FILE = EVIDENCE_DIR / "inference.jsonl"
 
 class ModelRuntime:
     def __init__(self, *, localai_url: str | None = None, timeout: float = 120.0):
+        self.default_model = os.getenv("AEGIS_DEFAULT_MODEL", "").strip() or None
+        self.default_provider = os.getenv("AEGIS_DEFAULT_PROVIDER", "").strip() or None
+        self.external_inference_enabled = os.getenv("AEGIS_ALLOW_EXTERNAL_INFERENCE", "false").lower() == "true"
         self.fabric = ModelFabric.from_files(
             model_registry_path=MODEL_REGISTRY,
             provider_registry_path=PROVIDER_REGISTRY,
             localai_url=localai_url or os.getenv("AEGIS_LOCALAI_URL", "http://127.0.0.1:8080"),
             ollama_url=os.getenv("AEGIS_OLLAMA_URL", "http://127.0.0.1:11434"),
             timeout=timeout,
+            allow_external_providers=self.external_inference_enabled,
         )
 
     def health(self) -> dict[str, Any]:
@@ -41,24 +45,41 @@ class ModelRuntime:
         providers: list[dict[str, Any]] = []
         ready = False
         for provider in self.fabric.providers:
+            if self.default_provider and provider.provider_id != self.default_provider:
+                continue
+            approved = self.fabric.registry.candidate_map(provider.provider_id)
+            if not approved:
+                providers.append({"provider": provider.provider_id, "online": False, "models": 0,
+                                  "error": "No approved models configured"})
+                continue
             try:
                 models = provider.models()
                 count = len(models) if isinstance(models, list) else 0
                 providers.append({"provider": provider.provider_id, "online": True, "models": count})
-                ready = ready or count > 0
+                ready = ready or any(isinstance(model, dict) and model.get("id") in approved
+                                     and (not self.default_model or model.get("id") == self.default_model)
+                                     for model in (models if isinstance(models, list) else []))
             except Exception as exc:
                 providers.append({"provider": provider.provider_id, "online": False, "models": 0,
                                   "error": str(exc)})
-        return {"ok": True, "service": "aegis-model-runtime", "ready": ready, "providers": providers}
+        return {"ok": True, "service": "aegis-model-runtime", "ready": ready, "providers": providers,
+                "default_model": self.default_model, "external_inference_enabled": self.external_inference_enabled}
 
     def chat(self, *, messages: list[dict[str, str]], purpose: str = "general", required_tags: set[str] | None = None, modality: str = "text", preferred_provider: str | None = None, local_only: bool = True, allow_external: bool = False, metadata: dict[str, Any] | None = None, **kwargs: Any) -> dict[str, Any]:
         if not messages or not all(isinstance(m, dict) and isinstance(m.get("role"), str) and isinstance(m.get("content"), str) for m in messages):
             raise ValueError("messages must be a non-empty list of role/content objects")
         if len(messages) > 100 or sum(len(m["content"]) for m in messages) > 200_000:
             raise ValueError("message content exceeds limit")
+        if not self.external_inference_enabled:
+            if allow_external or preferred_provider == "openai":
+                raise ValueError("External paid inference is disabled on this AEGIS deployment")
+            local_only = True
         request_id = uuid.uuid4().hex
         started = time.monotonic()
-        request = RoutingRequest(required_tags=frozenset(required_tags or set()), modality=modality, preferred_provider=preferred_provider, local_only=local_only, allow_external=allow_external, purpose=purpose, metadata=metadata or {})
+        request = RoutingRequest(required_tags=frozenset(required_tags or set()), modality=modality,
+                                 preferred_provider=preferred_provider or self.default_provider,
+                                 preferred_model=self.default_model, local_only=local_only,
+                                 allow_external=allow_external, purpose=purpose, metadata=metadata or {})
         route = self.fabric.resolve(request=request)
         runtime_messages = apply_context(messages, purpose=purpose)
         result = self.fabric.chat(route, messages=runtime_messages, **kwargs)

@@ -1,0 +1,406 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  Isolated CloakBrowser MCP service for AEGIS. The service uses ECS Fargate tasks
+  behind an internal Application Load Balancer, with a generated bearer token,
+  scoped task execution permissions, and CloudWatch logging.
+
+Metadata:
+  AWSToolsMetrics:
+    AWSAgentToolkit: aws-cloudformation@3
+  com.aws.cloudformation.Context:
+    purpose: >-
+      Run the CloakBrowser MCP browser operator as a private, independently
+      replaceable AWS service for AEGIS.
+    constraints:
+      - The MCP endpoint must not be internet-facing.
+      - Only the existing AEGIS control-plane security group may reach the ALB.
+      - Browser tasks need outbound internet access for authorized web navigation.
+      - The bearer token must be generated and stored in Secrets Manager.
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: Existing VPC for the private service resources.
+  AegisSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Existing AEGIS control-plane security group allowed to call MCP.
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Existing public subnets used for the internal ALB and Fargate egress.
+  ImageUri:
+    Type: String
+    Description: Immutable ECR image URI, preferably pinned by digest.
+  EcrRepositoryArn:
+    Type: String
+    Description: ARN of the private ECR repository containing ImageUri.
+  ContainerPort:
+    Type: Number
+    Default: 3000
+    MinValue: 1
+    MaxValue: 65535
+  TaskCpu:
+    Type: String
+    Default: '2048'
+    AllowedValues: ['1024', '2048', '4096']
+  TaskMemory:
+    Type: String
+    Default: '4096'
+    AllowedValues: ['2048', '3072', '4096', '5120', '6144', '7168', '8192']
+  DesiredCount:
+    Type: Number
+    Default: 1
+    MinValue: 1
+    MaxValue: 2
+
+Resources:
+  EcsCluster:
+    Type: AWS::ECS::Cluster
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Dedicated ECS control plane keeps browser tasks separate from the AEGIS EC2 host.
+        must: Keep Container Insights enabled for service health visibility.
+    Properties:
+      ClusterSettings:
+        - Name: containerInsights
+          Value: enabled
+      Tags:
+        - Key: Project
+          Value: AEGIS
+        - Key: Service
+          Value: cloakbrowser-mcp
+
+  CloakLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Retain short-lived browser service logs for operational verification and incident review.
+        mutability: Retention is intentionally bounded to fourteen days.
+    Properties:
+      RetentionInDays: 14
+      Tags:
+        - Key: Project
+          Value: AEGIS
+        - Key: Service
+          Value: cloakbrowser-mcp
+
+  CloakAuthSecret:
+    Type: AWS::SecretsManager::Secret
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Hold the MCP bearer token outside the task definition and source tree.
+        must: Do not expose the generated token through CloudFormation outputs or logs.
+    Properties:
+      Description: Bearer token for the private AEGIS CloakBrowser MCP endpoint.
+      GenerateSecretString:
+        SecretStringTemplate: '{}'
+        GenerateStringKey: token
+        PasswordLength: 48
+        ExcludePunctuation: true
+      Tags:
+        - Key: Project
+          Value: AEGIS
+        - Key: Service
+          Value: cloakbrowser-mcp
+
+  EcsExecutionRole:
+    Type: AWS::IAM::Role
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Allow ECS to pull this image, publish logs, and inject only the generated endpoint token.
+        must: Keep ECR, Logs, and Secrets Manager permissions resource-scoped wherever AWS permits.
+    Properties:
+      Description: ECS execution role for the AEGIS CloakBrowser MCP task.
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+              ArnLike:
+                aws:SourceArn: !Sub arn:${AWS::Partition}:ecs:${AWS::Region}:${AWS::AccountId}:*
+      Policies:
+        - PolicyName: PullImageWriteLogsReadToken
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: EcrAuth
+                Effect: Allow
+                Action: ecr:GetAuthorizationToken
+                Resource: '*'
+              - Sid: PullPinnedImage
+                Effect: Allow
+                Action:
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:BatchGetImage
+                  - ecr:GetDownloadUrlForLayer
+                Resource: !Ref EcrRepositoryArn
+              - Sid: WriteServiceLogs
+                Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub '${CloakLogGroup.Arn}:*'
+              - Sid: ReadBearerToken
+                Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource: !Ref CloakAuthSecret
+      Tags:
+        - Key: Project
+          Value: AEGIS
+        - Key: Service
+          Value: cloakbrowser-mcp
+
+  AlbSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Permit MCP calls only from the existing AEGIS control-plane security group.
+        must: Never add public ingress to the internal ALB.
+    Properties:
+      GroupDescription: Private ALB ingress for AEGIS CloakBrowser MCP.
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: !Ref ContainerPort
+          ToPort: !Ref ContainerPort
+          SourceSecurityGroupId: !Ref AegisSecurityGroupId
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Project
+          Value: AEGIS
+        - Key: Service
+          Value: cloakbrowser-mcp
+
+  TaskSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Keep task ingress limited to the internal ALB while allowing browser egress.
+        must: Do not permit direct ingress from the internet or the AEGIS host.
+    Properties:
+      GroupDescription: CloakBrowser MCP task security group.
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: !Ref ContainerPort
+          ToPort: !Ref ContainerPort
+          SourceSecurityGroupId: !Ref AlbSecurityGroup
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Project
+          Value: AEGIS
+        - Key: Service
+          Value: cloakbrowser-mcp
+
+  InternalLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Provide a stable private DNS endpoint while allowing ECS tasks to be replaced.
+        must: Keep Scheme internal and place the load balancer only in the supplied VPC subnets.
+    Properties:
+      Scheme: internal
+      IpAddressType: ipv4
+      Subnets: !Ref SubnetIds
+      SecurityGroups:
+        - !Ref AlbSecurityGroup
+      LoadBalancerAttributes:
+        - Key: routing.http.drop_invalid_header_fields.enabled
+          Value: 'true'
+      Tags:
+        - Key: Project
+          Value: AEGIS
+        - Key: Service
+          Value: cloakbrowser-mcp
+
+  CloakTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Route private ALB traffic to awsvpc Fargate task ENIs and replace unhealthy tasks.
+        must: Use the service health probe rather than the MCP endpoint as the target health check.
+    Properties:
+      TargetType: ip
+      Protocol: HTTP
+      Port: !Ref ContainerPort
+      VpcId: !Ref VpcId
+      HealthCheckEnabled: true
+      HealthCheckProtocol: HTTP
+      HealthCheckPath: /healthz
+      HealthCheckPort: traffic-port
+      HealthCheckIntervalSeconds: 30
+      HealthCheckTimeoutSeconds: 10
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+      Matcher:
+        HttpCode: '401'
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: '30'
+      Tags:
+        - Key: Project
+          Value: AEGIS
+        - Key: Service
+          Value: cloakbrowser-mcp
+
+  InternalListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Expose the private HTTP MCP endpoint through the internal ALB.
+        must: Do not change this listener to an internet-facing load balancer without a separate security review.
+    Properties:
+      LoadBalancerArn: !Ref InternalLoadBalancer
+      Port: !Ref ContainerPort
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref CloakTargetGroup
+
+  CloakTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Define the pinned CloakBrowser image, private HTTP transport, resource limits, and token injection.
+        must: Keep CDP disabled, headless mode enabled, and the task token sourced only from Secrets Manager.
+    Properties:
+      Family: !Sub '${AWS::StackName}-task'
+      Cpu: !Ref TaskCpu
+      Memory: !Ref TaskMemory
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      RuntimePlatform:
+        CpuArchitecture: X86_64
+        OperatingSystemFamily: LINUX
+      ExecutionRoleArn: !GetAtt EcsExecutionRole.Arn
+      Volumes:
+        - Name: artifacts
+      ContainerDefinitions:
+        - Name: cloakbrowser
+          Image: !Ref ImageUri
+          Essential: true
+          PortMappings:
+            - ContainerPort: !Ref ContainerPort
+              HostPort: !Ref ContainerPort
+              Protocol: tcp
+          Environment:
+            - Name: CLOAK_PLAYWRIGHT_MCP_TRANSPORT
+              Value: streamable-http
+            - Name: CLOAK_PLAYWRIGHT_MCP_HTTP_HOST
+              Value: 0.0.0.0
+            - Name: CLOAK_PLAYWRIGHT_MCP_HTTP_PORT
+              Value: !Ref ContainerPort
+            - Name: CLOAK_PLAYWRIGHT_MCP_HTTP_SESSION_MAX
+              Value: '8'
+            - Name: CLOAK_PLAYWRIGHT_MCP_HTTP_SESSION_IDLE_TTL_MS
+              Value: '1800000'
+            - Name: PLAYWRIGHT_MCP_HEADLESS
+              Value: 'true'
+            - Name: PLAYWRIGHT_MCP_BROWSER_ENGINE
+              Value: cloak
+            - Name: CLOAK_PLAYWRIGHT_MCP_NO_SANDBOX
+              Value: 'true'
+            - Name: PLAYWRIGHT_MCP_OUTPUT_DIR
+              Value: /data
+          Secrets:
+            - Name: CLOAK_PLAYWRIGHT_MCP_HTTP_AUTH_TOKEN
+              ValueFrom: !Sub '${CloakAuthSecret}:token::'
+          MountPoints:
+            - SourceVolume: artifacts
+              ContainerPath: /data
+              ReadOnly: false
+          LinuxParameters:
+            InitProcessEnabled: true
+          HealthCheck:
+            Command:
+              - CMD-SHELL
+              - >-
+                node -e "fetch('http://127.0.0.1:3000/healthz',{headers:{Authorization:'Bearer
+                '+process.env.CLOAK_PLAYWRIGHT_MCP_HTTP_AUTH_TOKEN}}).then((r) =>
+                process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+            Interval: 30
+            Timeout: 10
+            Retries: 3
+            StartPeriod: 60
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref CloakLogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: cloakbrowser
+      Tags:
+        - Key: Project
+          Value: AEGIS
+        - Key: Service
+          Value: cloakbrowser-mcp
+
+  CloakService:
+    Type: AWS::ECS::Service
+    DependsOn:
+      - InternalListener
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Maintain one healthy private CloakBrowser task and replace failed tasks automatically.
+        must: Keep the deployment circuit breaker enabled with rollback and do not assign a public load balancer.
+    Properties:
+      Cluster: !Ref EcsCluster
+      DesiredCount: !Ref DesiredCount
+      LaunchType: FARGATE
+      PlatformVersion: LATEST
+      HealthCheckGracePeriodSeconds: 180
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 100
+        DeploymentCircuitBreaker:
+          Enable: true
+          Rollback: true
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          SecurityGroups:
+            - !Ref TaskSecurityGroup
+          Subnets: !Ref SubnetIds
+      LoadBalancers:
+        - ContainerName: cloakbrowser
+          ContainerPort: !Ref ContainerPort
+          TargetGroupArn: !Ref CloakTargetGroup
+      TaskDefinition: !Ref CloakTaskDefinition
+      PropagateTags: SERVICE
+      Tags:
+        - Key: Project
+          Value: AEGIS
+        - Key: Service
+          Value: cloakbrowser-mcp
+
+Outputs:
+  ClusterArn:
+    Description: ECS cluster ARN.
+    Value: !GetAtt EcsCluster.Arn
+  ServiceArn:
+    Description: ECS service ARN.
+    Value: !Ref CloakService
+  InternalAlbDnsName:
+    Description: Private ALB DNS name reachable from the AEGIS VPC.
+    Value: !GetAtt InternalLoadBalancer.DNSName
+  McpEndpoint:
+    Description: Private Streamable HTTP MCP endpoint; requires the generated bearer token.
+    Value: !Sub 'http://${InternalLoadBalancer.DNSName}:${ContainerPort}/mcp'
+  HealthEndpoint:
+    Description: Private service health endpoint.
+    Value: !Sub 'http://${InternalLoadBalancer.DNSName}:${ContainerPort}/healthz'
+  AuthSecretArn:
+    Description: Secrets Manager ARN containing the generated bearer token.
+    Value: !Ref CloakAuthSecret

@@ -6,7 +6,7 @@ const runtime = process.env.AEGIS_MODEL_RUNTIME_URL?.replace(/\/$/, '') || 'http
 
 export async function GET() {
   try {
-    const response = await fetch(`${runtime}/health`, { cache: 'no-store', signal: AbortSignal.timeout(3000) })
+    const response = await fetch(`${runtime}/health`, { cache: 'no-store', signal: AbortSignal.timeout(8000) })
     const data = await response.json().catch(() => ({}))
     return NextResponse.json({ connected: response.ok, ...data }, { status: response.ok ? 200 : 503 })
   } catch (error) {
@@ -37,11 +37,11 @@ export async function POST(req: Request) {
         required_tags: Array.isArray(body.required_tags) ? body.required_tags : [],
         modality: typeof body.modality === 'string' ? body.modality : 'text',
         preferred_provider: typeof body.preferred_provider === 'string' ? body.preferred_provider : undefined,
-        local_only: body.local_only !== false,
-        allow_external: body.allow_external === true,
+        local_only: true,
+        allow_external: false,
         metadata: typeof body.metadata === 'object' && body.metadata !== null ? body.metadata : {},
         temperature: typeof body.temperature === 'number' ? body.temperature : undefined,
-        max_tokens: Number.isInteger(body.max_tokens) ? body.max_tokens : undefined,
+        max_tokens: Number.isInteger(body.max_tokens) ? body.max_tokens : 1024,
       }),
       cache: 'no-store',
       signal: AbortSignal.timeout(125000),

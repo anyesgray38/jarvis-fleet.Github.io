@@ -81,6 +81,23 @@ class ModelFabricTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 ModelRegistry.from_file(handle.name)
 
+    def test_pin_does_not_fall_back_to_another_model(self):
+        provider = Mock(provider_id="localai")
+        provider.models.return_value = [{"id": "google/gemma-4-31B-it"}, {"id": "Qwen/Qwen3.8-Flash-Next"}]
+        router = ModelRouter([provider], registry=self.registry())
+        request = RoutingRequest(preferred_model="Qwen/Qwen3.8-Flash-Next", local_only=True)
+        self.assertEqual(router.resolve(request=request).model, "Qwen/Qwen3.8-Flash-Next")
+        provider.models.return_value = [{"id": "google/gemma-4-31B-it"}]
+        with self.assertRaises(LookupError):
+            router.resolve(request=request)
+
+    def test_disabled_external_provider_is_not_contacted_for_discovery(self):
+        provider = Mock(provider_id="openai")
+        router = ModelRouter([provider], provider_specs={"openai": {"external": True}}, registry=self.registry())
+        with self.assertRaises(LookupError):
+            router.resolve(request=RoutingRequest(local_only=True))
+        provider.models.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

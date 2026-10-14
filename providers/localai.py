@@ -38,7 +38,7 @@ class LocalAIProvider:
     def __init__(self, config: LocalAIConfig | None = None) -> None:
         self.config = config or LocalAIConfig()
 
-    def _request(self, method: str, path: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+    def _request(self, method: str, path: str, payload: dict[str, Any] | None = None, *, timeout: float | None = None) -> dict[str, Any]:
         body = None if payload is None else json.dumps(payload).encode("utf-8")
         headers = {"Accept": "application/json"}
         if body is not None:
@@ -48,7 +48,7 @@ class LocalAIProvider:
 
         request = Request(self.config.api_base + path, data=body, headers=headers, method=method)
         try:
-            with urlopen(request, timeout=self.config.timeout) as response:
+            with urlopen(request, timeout=self.config.timeout if timeout is None else timeout) as response:
                 raw = response.read().decode("utf-8")
         except (HTTPError, URLError, TimeoutError) as exc:
             raise LocalAIError(f"LocalAI request failed: {exc}") from exc
@@ -63,7 +63,7 @@ class LocalAIProvider:
 
     def health(self) -> dict[str, Any]:
         """Return model inventory; a successful response is the provider health signal."""
-        return self._request("GET", "/models")
+        return self._request("GET", "/models", timeout=min(self.config.timeout, 3.0))
 
     def models(self) -> list[dict[str, Any]]:
         """List models exposed by the LocalAI instance."""

@@ -44,7 +44,15 @@ class ModelRouter:
         for provider in self.providers.values():
             spec = {"id": provider.provider_id, "external": False, "modalities": ["text"]}
             spec.update(self.provider_specs.get(provider.provider_id, {}))
+            if request.preferred_provider and provider.provider_id != request.preferred_provider:
+                continue
+            if spec.get("external", False) and (request.local_only or not request.allow_external):
+                continue
             registered = self.registry.candidate_map(provider.provider_id) if self.registry else None
+            if registered is not None and not registered:
+                continue
+            if request.preferred_model and registered is not None and request.preferred_model not in registered:
+                continue
             try:
                 live_models = provider.models()
             except Exception:

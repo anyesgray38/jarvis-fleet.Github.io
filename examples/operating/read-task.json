@@ -1,0 +1,10 @@
+{
+  "task_id": "issue55-local-read",
+  "objective": "Inspect the operating doctrine and confirm its responsibility boundary",
+  "capability": "terminal.read",
+  "input": {"path": "AGENTS.md"},
+  "criteria": [
+    {"name": "constitution_present", "field": "content", "operator": "contains", "expected": "Prime Directive"},
+    {"name": "correct_source", "field": "path", "operator": "equals", "expected": "AGENTS.md"}
+  ]
+}

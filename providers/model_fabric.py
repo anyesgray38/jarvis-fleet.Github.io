@@ -31,6 +31,7 @@ class ModelFabric:
         openai_url: str = "https://api.openai.com",
         ollama_url: str = "http://127.0.0.1:11434",
         timeout: float = 120.0,
+        allow_external_providers: bool = True,
     ) -> "ModelFabric":
         registry = ModelRegistry.from_file(model_registry_path)
         payload = json.loads(Path(provider_registry_path).read_text(encoding="utf-8"))
@@ -41,6 +42,8 @@ class ModelFabric:
             if not isinstance(provider_id, str):
                 continue
             specs[provider_id] = spec
+            if not allow_external_providers and (spec.get("external", False) or provider_id == "openai"):
+                continue
             if provider_id == "localai":
                 providers.append(LocalAIProvider(LocalAIConfig(base_url=localai_url, timeout=timeout)))
             elif provider_id == "ollama":

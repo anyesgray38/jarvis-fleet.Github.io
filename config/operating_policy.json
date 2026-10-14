@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "max_attempts": 3,
+  "max_calls": 6,
+  "max_seconds": 300,
+  "capabilities": {
+    "terminal.read": {
+      "effect": "read", "trust": 0, "idempotent": true, "controls": [], "action": "filesystem.read"
+    },
+    "terminal.write": {
+      "effect": "write", "trust": 3, "idempotent": false,
+      "controls": ["terminal_execution"], "artifact_kind": "configuration", "action": "filesystem.write"
+    }
+  }
+}

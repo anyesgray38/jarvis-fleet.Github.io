@@ -45,6 +45,10 @@ def build_parser()->argparse.ArgumentParser:
     sub=p.add_subparsers(dest="command")
     for n,h in {"status":"show AEGIS runtime status","capabilities":"list registered capabilities","agents":"show configured fleet agents","providers":"show configured model providers","logs":"show recent evidence records","memory":"show memory layer status","doctor":"run local control-plane diagnostics","help":"show command help"}.items():sub.add_parser(n,help=h)
     audit=sub.add_parser("audit",help="audit Python code without executing it");audit.add_argument("target",nargs="?",default=".")
+    operate=sub.add_parser("operate",help="plan a domain-independent task; optionally execute a governed local read")
+    operate.add_argument("task_file",help="JSON task contract with measurable success criteria")
+    operate.add_argument("--workspace",default=".")
+    operate.add_argument("--execute",action="store_true",help="execute only the allowlisted local read adapter")
     ask=sub.add_parser("ask",help="ask the governed model runtime");ask.add_argument("query");ask.add_argument("--purpose",default="general");ask.add_argument("--external",action="store_true")
     ins=sub.add_parser("inspect",help="inspect a local file or directory");ins.add_argument("target",nargs="?",default=".")
     plan=sub.add_parser("plan",help="create a task envelope without executing");plan.add_argument("objective");plan.add_argument("--capability",default="filesystem.read");plan.add_argument("--trust",default="PREPARE");plan.add_argument("--input",default="{}")
@@ -300,6 +304,16 @@ def _project(args):
     raise ValueError("project command is required")
 
 def execute(args):
+    if args.command=="operate":
+        from jarvis.operating import local_read_engine
+        from evidence.store import EvidenceStore
+        workspace=Path(args.workspace).resolve(strict=True)
+        events=EvidenceStore(workspace/".jarvis"/"operating.jsonl") if args.execute else []
+        engine=local_read_engine(workspace,evidence=events,safety=_settings(args))
+        plan=engine.plan(_load_json(Path(args.task_file)))
+        result=engine.run(plan) if args.execute else plan
+        _emit(args,result)
+        return 0 if not args.execute or result["status"]=="passed" else 1
     if args.command in {None,"help"}:print(BANNER);build_parser().print_help();return 0
     if args.command=="status":return _emit(args,_status(args))
     if args.command=="project":return _project(args)

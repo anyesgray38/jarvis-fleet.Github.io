@@ -36,6 +36,7 @@
     },
     {
       "id": "openai",
+      "external": true,
       "kind": "model_inference",
       "status": "supported",
       "transport": "openai_compatible_http",

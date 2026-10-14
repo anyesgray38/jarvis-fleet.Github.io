@@ -1,8 +1,17 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >-
   Private AEGIS EC2 host. The instance has no inbound security-group rules;
-  administer it through AWS Systems Manager and expose the application through
-  the existing Tailscale Serve deployment.
+  administer it through AWS Systems Manager, and keep model artifacts in a
+  private S3 prefix for cloud-hosted workloads.
+
+Metadata:
+  AWSToolsMetrics:
+    AWSAgentToolkit: aws-cloudformation@3
+  com.aws.cloudformation.Context:
+    arch: EC2 control plane + private S3 model artifacts + SSM administration
+    must:
+      - keep inbound security-group rules empty; use SSM/Tailscale for administration
+      - keep model object permissions scoped to the configured bucket prefix
 
 Parameters:
   VpcId:
@@ -35,6 +44,14 @@ Parameters:
     Type: String
     Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
     Description: Public SSM parameter for the Amazon Linux 2023 x86_64 AMI.
+  ModelBucketName:
+    Type: String
+    Description: Existing private S3 bucket that stores AEGIS model artifacts.
+  ModelKeyPrefix:
+    Type: String
+    Default: models/HauhauCS/Qwen3.8-27B-Uncensored-HauhauCS-Aggressive-MTP-GGUF
+    AllowedPattern: '^[A-Za-z0-9!_.*''()/+=,@-]+$'
+    Description: S3 key prefix the EC2 role may read and write for the model.
 
 Conditions:
   HasKeyName:
@@ -63,6 +80,16 @@ Resources:
 
   AegisInstanceRole:
     Type: AWS::IAM::Role
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: >-
+          EC2 execution role for SSM administration and the cloud model transfer;
+          S3 access is prefix-scoped so the host can stage and later load the
+          AEGIS model without broad account permissions.
+        must:
+          - preserve AmazonSSMManagedInstanceCore for SSH-less administration
+          - keep S3 object actions limited to ModelBucketName/ModelKeyPrefix
+        mutable: change-with-constraints
     Properties:
       RoleName: !Sub aegis-ec2-${AWS::StackName}
       AssumeRolePolicyDocument:
@@ -74,6 +101,25 @@ Resources:
             Action: sts:AssumeRole
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      Policies:
+        - PolicyName: AegisModelArtifacts
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: ListModelBucketForTransfer
+                Effect: Allow
+                Action:
+                  - s3:ListBucket
+                  - s3:ListBucketMultipartUploads
+                Resource: !Sub arn:${AWS::Partition}:s3:::${ModelBucketName}
+              - Sid: ManageModelObjects
+                Effect: Allow
+                Action:
+                  - s3:AbortMultipartUpload
+                  - s3:GetObject
+                  - s3:ListMultipartUploadParts
+                  - s3:PutObject
+                Resource: !Sub arn:${AWS::Partition}:s3:::${ModelBucketName}/${ModelKeyPrefix}/*
       Tags:
         - Key: Name
           Value: aegis-ec2-role
@@ -128,12 +174,12 @@ Resources:
 
           compose_version=v5.6.0
           install -d -m 0755 /usr/local/lib/docker/cli-plugins
-          curl -fsSL "https://github.com/docker/compose/releases/download/${compose_version}/docker-compose-linux-x86_64" \
+          curl -fsSL "https://github.com/docker/compose/releases/download/${!compose_version}/docker-compose-linux-x86_64" \
             -o /usr/local/lib/docker/cli-plugins/docker-compose
           chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
 
           buildx_version=v0.38.0
-          curl -fsSL "https://github.com/docker/buildx/releases/download/${buildx_version}/buildx-${buildx_version}.linux-amd64" \
+          curl -fsSL "https://github.com/docker/buildx/releases/download/${!buildx_version}/buildx-${!buildx_version}.linux-amd64" \
             -o /usr/local/lib/docker/cli-plugins/docker-buildx
           chmod +x /usr/local/lib/docker/cli-plugins/docker-buildx
 

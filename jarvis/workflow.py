@@ -23,6 +23,7 @@ class WorkflowStep:
     on_failure: str = "stop"
     verification: dict[str, Any] = field(default_factory=lambda: {"required": True})
     constraints: dict[str, Any] = field(default_factory=dict)
+    trust_required: int = 2
 
 
 @dataclass
@@ -36,6 +37,8 @@ class WorkflowPlan:
         if not self.workflow_id.strip() or not self.objective.strip():
             raise ValueError("workflow_id and objective are required")
         ids = [s.id for s in self.steps]
+        if not ids:
+            raise ValueError("workflow must contain at least one step")
         if len(ids) != len(set(ids)):
             raise ValueError("duplicate workflow step id")
         known = set(ids)
@@ -44,6 +47,8 @@ class WorkflowPlan:
                 raise ValueError("workflow steps require id and capability")
             if step.max_attempts < 1:
                 raise ValueError(f"max_attempts must be >= 1: {step.id}")
+            if type(step.trust_required) is not int or not 0 <= step.trust_required <= 5:
+                raise ValueError(f"invalid trust level: {step.id}")
             if step.on_failure not in {"stop", "continue", "escalate"}:
                 raise ValueError(f"invalid on_failure policy: {step.id}")
             missing = set(step.depends_on) - known
@@ -83,6 +88,7 @@ class WorkflowPlan:
                 on_failure=str(item.get("on_failure", "stop")),
                 verification=dict(item.get("verification", {"required": True})),
                 constraints=dict(item.get("constraints", {})),
+                trust_required=item.get("trust_required", 2),
             ))
         plan = cls(str(data.get("workflow_id", "")), str(data.get("objective", "")), steps, dict(data.get("metadata", {})))
         plan.validate()
@@ -156,6 +162,7 @@ class WorkflowRunner:
                 "input": task_input,
                 "constraints": step.constraints,
                 "verification": step.verification,
+                "trust_required": step.trust_required,
             }
             success = False
             last_error = None
@@ -173,6 +180,8 @@ class WorkflowRunner:
                         success = True
                         break
                     last_error = error or f"dispatcher status: {status}"
+                    if status in {"rejected", "escalated"}:
+                        break
                 except Exception as exc:
                     last_error = str(exc)
             if not success:
@@ -180,6 +189,7 @@ class WorkflowRunner:
                 state.error = last_error
                 if step.on_failure == "escalate":
                     escalated = True
+                    halted = True
                 if step.on_failure == "stop":
                     halted = True
             self._record(plan, step, state)

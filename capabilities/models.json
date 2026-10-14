@@ -2,6 +2,21 @@
   "version": 1,
   "models": [
     {
+      "id": "HauhauCS/Qwen3.8-27B-Uncensored-HauhauCS-Aggressive-MTP-GGUF:Q4_K_P",
+      "family": "qwen3.8",
+      "provider": "localai",
+      "source": "https://huggingface.co/HauhauCS/Qwen3.8-27B-Uncensored-HauhauCS-Aggressive-MTP-GGUF",
+      "format": "GGUF",
+      "quantization": "Q4_K_P",
+      "modalities": ["text"],
+      "tags": ["general", "reasoning", "coding", "local", "chat", "self-hosted", "aws"],
+      "purposes": ["general", "coding", "research", "planning", "security", "audit", "verification"],
+      "local_only": true,
+      "experimental": true,
+      "routable": false,
+      "notes": "Operator-selected Qwen release, stored in private S3. Q4_K_P is the proposed serving quant, pending deployment approval. No inference worker is deployed or verified. Keep unroutable until the private operator-owned endpoint serves this exact alias and passes a real inference test. local_only denotes the governed self-hosted trust boundary, not physical execution on the workstation. Vision and FastMTP are not enabled. See deploy/aws/qwen-inference-plan.md."
+    },
+    {
       "id": "huihui-qwen3.5-9b-abliterated:q2_k",
       "family": "qwen3.5",
       "provider": "localai",

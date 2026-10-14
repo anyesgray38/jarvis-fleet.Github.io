@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import Link from 'next/link'
 import AegisCommandCenter from './components/AegisCommandCenter'
 
 type Agent = {
@@ -97,6 +98,7 @@ export default function Home() {
       <nav className="nav" aria-label="AEGIS sections">
         <div className="nav-group">
           <div className="nav-label">Command</div>
+          <Link href="/chat">Talk to AEGIS</Link>
           <button type="button" className="active" aria-current="page"><span>4D Central</span><span className="nav-current" aria-hidden="true">›</span></button>
         </div>
       </nav>

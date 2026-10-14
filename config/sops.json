@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "procedures": [
+    {
+      "id": "local-evidence-read", "version": 1, "activity": "inspect",
+      "capabilities": ["terminal.read"], "status": "reviewed",
+      "instructions": [
+        "Confirm a workspace-relative path and measurable read criteria.",
+        "Authorize the read against capability policy and workspace boundaries.",
+        "Read using the existing filesystem action, independently compare the content, and evaluate criteria.",
+        "Record scoped evidence; never infer unrelated domain conclusions."
+      ],
+      "test_refs": ["tests.test_operating.LocalVerticalSliceTests"]
+    }
+  ]
+}
